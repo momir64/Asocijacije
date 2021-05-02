@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31205.134
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asocijacije", "Asocijacije.csproj", "{7E9CD826-3183-4290-8838-7B7501C45F1D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7E9CD826-3183-4290-8838-7B7501C45F1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E9CD826-3183-4290-8838-7B7501C45F1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E9CD826-3183-4290-8838-7B7501C45F1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E9CD826-3183-4290-8838-7B7501C45F1D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3A362DB0-DAEE-4164-9EC2-77782C10EEC8}
+	EndGlobalSection
+EndGlobal
