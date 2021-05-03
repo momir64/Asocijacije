@@ -1,16 +1,21 @@
-﻿
+﻿using System;
+using System.Drawing;
+using System.Windows.Forms;
+using System.ComponentModel;
+
 namespace Asocijacije {
     partial class TextBoxRounded {
         /// <summary> 
         /// Required designer variable.
         /// </summary>
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
         /// <summary> 
         /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing) {
+            label.Click -= new EventHandler(onClick);
             if (disposing && (components != null)) {
                 components.Dispose();
             }
@@ -39,7 +44,8 @@ namespace Asocijacije {
             this.label.TabIndex = 0;
             this.label.Text = "ПРОБА";
             this.label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.label.Click += new System.EventHandler(this.label_Click);
+            this.label.Click += new System.EventHandler(this.onClick);
+            this.label.TextChanged += new System.EventHandler(this.label_TextChanged);
             // 
             // textBox
             // 
@@ -67,7 +73,7 @@ namespace Asocijacije {
 
         #endregion
 
-        private System.Windows.Forms.Label label;
-        private System.Windows.Forms.TextBox textBox;
+        private Label label;
+        private TextBox textBox;
     }
 }

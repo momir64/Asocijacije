@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Linq;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -9,11 +9,19 @@ namespace Asocijacije {
         [DllImport("gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nheightRect, int nweightRect);
 
+        public int K;
+        public int B;
+        public string Title;
         public TextBoxRounded(double x, double y, double width, double height, string title, Form parent) {
             DoubleBuffered = true;
             InitializeComponent();
             SetDimensions(x, y, width, height, parent);
             label.Text = title[1] == '5' ? title[0].ToString() : title;
+            Title = title;
+            K = title[0] == 'А' ? 0 : title[0] == 'Б' ? 1 : title[0] == 'В' ? 2 : title[0] == 'Г' ? 3 : title[0] == '?' ? 4 : 5;
+            B = (int)char.GetNumericValue(title[1]) - 1;
+            B = B == -2 ? 4 : B;
+            B = K == 5 ? 5 : B;
         }
 
         public TextBoxRounded() {
@@ -33,6 +41,7 @@ namespace Asocijacije {
             UpdateDimensions(parent);
         }
 
+        private float FontSize = 0.4f;
         public void UpdateDimensions(Form parent) {
             double x = this.x / 1280 * parent.Width;
             double y = this.y / 720 * parent.Height;
@@ -43,23 +52,45 @@ namespace Asocijacije {
             label.Location = new Point(0, 0);
             label.Width = Width;
             label.Height = (int)Math.Round(Height * 0.95);
-            label.Font = new Font(label.Font.FontFamily, Height * 0.45f, FontStyle.Bold);
+            label.Font = new Font(label.Font.FontFamily, Height * FontSize, FontStyle.Bold);
             textBox.Location = new Point(Width / 2, Height / 2);
             MakeBackground();
         }
 
-        private void label_Click(object sender, EventArgs e) {
-            textBox.Focus();
+        public bool Otvoreno = false;
+        public void RestoreTitle() {
+            if (!Otvoreno)
+                label.Text = Title[1] == '5' ? Title[0].ToString() : Title;
         }
 
+        public event ResultEventHandler ResultEvent;
+        public delegate void ResultEventHandler(TextBoxRounded textBox);
         private void textBox_KeyPress(object sender, KeyPressEventArgs e) {
-            if (e.KeyChar == (char)8 && label.Text.Length > 0)
+            if (e.KeyChar == '\r' && label.Text.Length > 0) {
+                label.Focus();
+                ResultEvent(this);
+            }
+            else if (e.KeyChar == (char)8 && label.Text.Length > 0)
                 label.Text = label.Text.Substring(0, label.Text.Length - 1);
-            else if (e.KeyChar != (char)8 && label.Text.Length < 30)
-                label.Text += e.KeyChar;
-            while (label.Width > TextRenderer.MeasureText(label.Text, new Font(label.Font.FontFamily, label.Font.Size, label.Font.Style)).Width && label.Font.Size < Height * 0.45f)
+            else if (char.IsLetter(e.KeyChar) && label.Text.Length < 30)
+                label.Text += Lat2Cir(e.KeyChar);
+            textBox.Text = "";
+            e.Handled = true;
+        }
+
+        private static char[] lat = { 'Q', 'W', 'X', 'Y', 'A', 'B', 'V', 'G', 'D', 'Đ', 'E', 'Ž', 'Z', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'Ć', 'U', 'F', 'H', 'C', 'Č', 'Š' };
+        private static char[] cir = { 'Љ', 'Њ', 'Џ', 'И', 'А', 'Б', 'В', 'Г', 'Д', 'Ђ', 'Е', 'Ж', 'З', 'И', 'Ј', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'Ћ', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш' };
+        public char Lat2Cir(char c) {
+            c = char.ToUpper(c);
+            if (lat.Contains(c))
+                return cir[Array.IndexOf(lat, c)];
+            return c;
+        }
+
+        private void label_TextChanged(object sender, EventArgs e) {
+            while (label.Width * 0.9 > TextRenderer.MeasureText(label.Text, new Font(label.Font.FontFamily, label.Font.Size, label.Font.Style)).Width && label.Font.Size < Height * FontSize)
                 label.Font = new Font(label.Font.FontFamily, label.Font.Size + 0.5f, label.Font.Style);
-            while (label.Width < TextRenderer.MeasureText(label.Text, new Font(label.Font.FontFamily, label.Font.Size, label.Font.Style)).Width)
+            while (label.Width * 0.9 < TextRenderer.MeasureText(label.Text, new Font(label.Font.FontFamily, label.Font.Size, label.Font.Style)).Width)
                 label.Font = new Font(label.Font.FontFamily, label.Font.Size - 0.5f, label.Font.Style);
         }
 
@@ -88,77 +119,15 @@ namespace Asocijacije {
                 grfx.FillRoundedRectangle(new SolidBrush(Color.FromArgb(0, 32, 105)), rec3, Height * r3);
             }
         }
-    }
 
-    public static class Extensions {
-        public static void FillRoundedRectangle(this Graphics graphics, Brush brush, RectangleF bounds, float cornerRadius) {
-            if (graphics == null)
-                throw new ArgumentNullException("graphics");
-            if (brush == null)
-                throw new ArgumentNullException("brush");
-
-            using (GraphicsPath path = RoundedRect(bounds, cornerRadius)) {
-                graphics.FillPath(brush, path);
-            }
+        private void onClick(object sender, EventArgs e) => base.OnClick(e);
+        public override string Text {
+            set => label.Text = value;
+            get => label.Text;
         }
-
-        private static GraphicsPath RoundedRect(RectangleF rect, float radius) {
-            PointF point1, point2;
-            GraphicsPath path = new GraphicsPath();
-            path.AddArc(new RectangleF(rect.X, rect.Y, 2 * radius, 2 * radius), 180, 90);
-            point1 = new PointF(rect.X + radius, rect.Y);
-            point2 = new PointF(rect.Right - radius, rect.Y);
-            path.AddLine(point1, point2);
-            path.AddArc(new RectangleF(rect.Right - 2 * radius, rect.Y, 2 * radius, 2 * radius), 270, 90);
-            point1 = new PointF(rect.Right, rect.Y + radius);
-            point2 = new PointF(rect.Right, rect.Bottom - radius);
-            path.AddLine(point1, point2);
-            path.AddArc(new RectangleF(rect.Right - 2 * radius, rect.Bottom - 2 * radius, 2 * radius, 2 * radius), 0, 90);
-            point1 = new PointF(rect.Right - radius, rect.Bottom);
-            point2 = new PointF(rect.X + radius, rect.Bottom);
-            path.AddLine(point1, point2);
-            path.AddArc(new RectangleF(rect.X, rect.Bottom - 2 * radius, 2 * radius, 2 * radius), 90, 90);
-            point1 = new PointF(rect.X, rect.Bottom - radius);
-            point2 = new PointF(rect.X, rect.Y + radius);
-            path.AddLine(point1, point2);
-            path.CloseFigure();
-            return path;
-        }
-
-        //public static GraphicsPath RoundedRect(Rectangle bounds, int radius) {
-        //    int diameter = radius * 2;
-        //    Size size = new Size(diameter, diameter);
-        //    Rectangle arc = new Rectangle(bounds.Location, size);
-        //    GraphicsPath path = new GraphicsPath();
-        //    if (radius == 0) {
-        //        path.AddRectangle(bounds);
-        //        return path;
-        //    }
-        //    path.AddArc(arc, 180, 90);
-        //    arc.X = bounds.Right - diameter;
-        //    path.AddArc(arc, 270, 90);
-        //    arc.Y = bounds.Bottom - diameter;
-        //    path.AddArc(arc, 0, 90);
-        //    arc.X = bounds.Left;
-        //    path.AddArc(arc, 90, 90);
-        //    path.CloseFigure();
-        //    return path;
-        //}
-    }
-
-    public class ReadOnlyTextBox : TextBox {
-        [DllImport("user32.dll")]
-        static extern bool HideCaret(IntPtr hWnd);
-
-        public ReadOnlyTextBox() {
-            this.ReadOnly = true;
-            this.BackColor = Color.White;
-            this.GotFocus += TextBoxGotFocus;
-            this.Cursor = Cursors.Arrow; // mouse cursor like in other controls
-        }
-
-        private void TextBoxGotFocus(object sender, EventArgs args) {
-            HideCaret(this.Handle);
+        public new bool Enabled {
+            set { textBox.Enabled = value; textBox.Focus(); }
+            get => textBox.Enabled;
         }
     }
 }

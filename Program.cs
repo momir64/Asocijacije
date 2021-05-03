@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Asocijacije {
@@ -11,9 +8,28 @@ namespace Asocijacije {
         /// </summary>
         [STAThread]
         static void Main() {
+            //Search4("džez");
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new DobroVečeForm());
+        }
+
+        async static void Search4(params string[] str) {
+            SlagalicaTV client = new SlagalicaTV();
+            DateTime start = new DateTime(2020, 1, 1);
+            DateTime today = DateTime.Today;
+            DateTime date = start;
+            while (date != today) {
+                string data = await client.FindData(date.ToString("yyyy-MM-dd"), str);
+                Console.Title = ((date - start).TotalDays / (today - start).TotalDays).ToString("P");
+                if (data.Length > 0) {
+                    Console.WriteLine(date.ToString("yyyy-MM-dd"));
+                    Console.WriteLine(data);
+                    Console.WriteLine();
+                }
+                date = date.AddDays(1);
+            }
+            Console.Beep();
         }
     }
 }

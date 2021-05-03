@@ -35,6 +35,9 @@
   <PropertyGroup>
     <ApplicationIcon>skočko.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -86,12 +89,16 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="RoundedRectangle.cs" />
     <Compile Include="SlagalicaTV.cs" />
     <Compile Include="TextBoxRounded.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="TextBoxRounded.Designer.cs">
       <DependentUpon>TextBoxRounded.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TimerBox.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <EmbeddedResource Include="DobroVečeForm.resx">
       <DependentUpon>DobroVečeForm.cs</DependentUpon>
@@ -112,6 +119,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="TextBoxRounded.resx">
       <DependentUpon>TextBoxRounded.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TimerBox.resx">
+      <DependentUpon>TimerBox.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

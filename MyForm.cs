@@ -14,6 +14,7 @@ namespace Asocijacije {
         public Color titleButtonsGrayed = Color.FromArgb(0, 7, 166);
         private void MyForm_Load(object sender, EventArgs e) {
             ClientSize = new Size(1280, 720);
+            MinimumSize = new Size(640, 360);
         }
 
         public bool backBtnVisible { set { backBtn.Visible = value; } }
