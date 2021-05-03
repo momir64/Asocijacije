@@ -7,7 +7,7 @@ using System.Windows.Forms;
 //konačno 7
 namespace Asocijacije {
     public partial class AsocijacijeForm : PozadinaForm {
-        string[][][] asocijacije;
+        readonly string[][][] asocijacije;
         public AsocijacijeForm(string[][][] asocijacije) {
             this.asocijacije = asocijacije;
             InitializeComponent();
@@ -16,7 +16,7 @@ namespace Asocijacije {
         bool loaded = false;
         TimerBox timerBox;
         TextBoxRounded dalje;
-        TextBoxRounded[][] kolone = new TextBoxRounded[5][];
+        readonly TextBoxRounded[][] kolone = new TextBoxRounded[5][];
         private void AsocijacijeForm_Load(object sender, EventArgs e) {
             PlaceScores();
             timerBox = new TimerBox(626, 63, 27, 214, this);
@@ -29,7 +29,7 @@ namespace Asocijacije {
                 kolone[1][i] = new TextBoxRounded(590.7 + 52.5 * (i + 1), 334.8 - 54.2 * (i + 1), 279f, 50f, "Б" + (5 - i), this);
                 kolone[2][i] = new TextBoxRounded(409.9 - 52.5 * (i + 1), 54.5 * (i + 1) + 334.7, 279f, 50f, "В" + (5 - i), this);
                 kolone[3][i] = new TextBoxRounded(52.5 * (i + 1) + 590.7, 54.5 * (i + 1) + 334.7, 279f, 50f, "Г" + (5 - i), this);
-                kolone[i][0].ResultEvent += Result;
+                kolone[i][0].ResultEvent += OnResult;
             }
             for (int i = 0; i < 4; i++)
                 for (int j = 0; j < 5; j++) {
@@ -73,51 +73,84 @@ namespace Asocijacije {
 
         float sec = 1;
         bool started = false;
-        private void timer_Tick(object sender, EventArgs e) {
-            timerBox.SetPercentage(sec / 120);
-            sec++;
+        private void Tick(object sender, EventArgs e) {
+            if (sec <= 120) {
+                timerBox.SetPercentage(sec / 120);
+                sec++;
+            }
+            else {
+                finished = true;
+                RestoreTitles();
+            }
         }
 
+        bool finished = false;
         bool otvaranje = true;
-        TextBoxRounded textBoxOld;
-        void TextBoxClick(object sender, EventArgs e) {
-            TextBoxRounded textBox = (TextBoxRounded)sender;
-            if (!started) {
-                started = true;
-                timer.Enabled = true;
-                timer_Tick(sender, e);
-            }
-
-            if (otvaranje && textBox.B < 4) {
-                otvaranje = false;
-                textBox.Text = asocijacije[textBox.K][textBox.B][0];
-            }
-            else if (otvaranje == false && textBox.B == 4 && differentTextBox(textBox)) {
-                RestoreTitles();
-                backClick = false;
-                textBox.Enabled = true;
-                textBox.ResetText();
-            }
-            else if (otvaranje == false && textBox.B == 5) {
-                RestoreTitles();
-                otvaranje = true;
-            }
-
-            textBoxOld = textBox;
-        }
-
-        void Result(TextBoxRounded textBox) {
+        void OnResult(TextBoxRounded textBox) {
             otvaranje = true;
-            foreach (string resenje in asocijacije[textBox.K][4]) {
+            foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
                 if (textBox.Text == resenje) {
-                    textBox.Otvoreno = true;
+                    int score = 0;
+                    for (int i = textBox.K == 4 ? 0 : textBox.K; i < (textBox.K == 4 ? 4 : textBox.K + 1); i++) {
+                        probajKonacno = true;
+                        if (!kolone[i][0].Opened)
+                            score += 3;
+                        for (int j = 0; j < 5; j++) {
+                            if (j < 4 && !kolone[i][4 - j].Opened)
+                                score++;
+                            kolone[i][4 - j].Open(asocijacije[i][j][0], Color.FromArgb(32, 160, 254));
+                        }
+                    }
+                    if (textBox.K == 4) {
+                        kolone[4][0].Open(asocijacije[4][0][0], Color.FromArgb(32, 160, 254));
+                        finished = true;
+                        score += 7;
+                    }
+                    AddScore(scoreL, score);
+                    textBox.Opened = true;
                     return;
                 }
             }
             RestoreTitles();
         }
 
-        bool differentTextBox(TextBoxRounded textBox) {
+        TextBoxRounded textBoxOld;
+        bool probajKonacno = false;
+        void TextBoxClick(object sender, EventArgs e) {
+            TextBoxRounded textBox = (TextBoxRounded)sender;
+            if (!started) {
+                started = true;
+                timer.Enabled = true;
+                Tick(sender, e);
+            }
+
+            if (!finished && otvaranje && textBox.B < 4 && !textBox.Opened) {
+                RestoreTitles();
+                otvaranje = false;
+                textBox.Text = asocijacije[textBox.K][textBox.B][0];
+                textBox.Opened = true;
+            }
+            else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4)) && textBox.B == 4 && DifferentTextBox(textBox)) {
+                RestoreTitles();
+                backClick = false;
+                textBox.Enabled = true;
+                textBox.ResetText();
+            }
+            else if (!finished && !otvaranje && textBox.B == 5) {
+                RestoreTitles();
+                otvaranje = true;
+            }
+            else if (!finished && (textBox.B < 4 || otvaranje) && DifferentTextBox(textBox))
+                RestoreTitles();
+
+            textBoxOld = textBox;
+        }
+
+        void AddScore(Label label, int score) {
+            label.Text = (int.Parse(label.Text) + score).ToString();
+        }
+
+        bool DifferentTextBox(TextBoxRounded textBox) {
             return textBoxOld == null || textBox.K != textBoxOld.K || textBox.B != textBoxOld.B || backClick;
         }
 

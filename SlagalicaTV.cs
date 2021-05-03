@@ -62,7 +62,6 @@ namespace Asocijacije {
         }
 
         public static string GetRandomDate() {
-            return "2021-03-31";
             Random gen = new Random();
             DateTime start = new DateTime(2020, 1, 1);
             int range = (DateTime.Today - start).Days - 1;

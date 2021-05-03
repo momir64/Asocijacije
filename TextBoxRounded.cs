@@ -57,10 +57,20 @@ namespace Asocijacije {
             MakeBackground();
         }
 
-        public bool Otvoreno = false;
+        public bool Opened = false;
         public void RestoreTitle() {
-            if (!Otvoreno)
+            if (!Opened)
                 label.Text = Title[1] == '5' ? Title[0].ToString() : Title;
+            label.Focus();
+        }
+
+        Color InsideColor = Color.FromArgb(0, 32, 105);
+        public void Open(string str, Color color) {
+            Opened = true;
+            InsideColor = color;
+            MakeBackground();
+            Invalidate();
+            label.Text = str;
         }
 
         public event ResultEventHandler ResultEvent;
@@ -116,7 +126,7 @@ namespace Asocijacije {
                 RectangleF rec3 = new RectangleF(Height * e2, Height * e2, Width - Height * e2 * 2, Height * (1 - e2 * 2));
                 grfx.FillRoundedRectangle(new SolidBrush(Color.FromArgb(0, 0, 32)), rec1, Height * r1);
                 grfx.FillRoundedRectangle(new SolidBrush(Color.FromArgb(175, 176, 184)), rec2, Height * r2);
-                grfx.FillRoundedRectangle(new SolidBrush(Color.FromArgb(0, 32, 105)), rec3, Height * r3);
+                grfx.FillRoundedRectangle(new SolidBrush(InsideColor), rec3, Height * r3);
             }
         }
 
