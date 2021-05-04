@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -72,21 +73,29 @@ namespace Asocijacije {
         }
 
         float sec = 1;
+        int maxTime = 12;
         bool started = false;
         private void Tick(object sender, EventArgs e) {
-            if (!finished && sec <= 120) {
-                timerBox.SetPercentage(sec / 120);
+            if (!finished && sec <= maxTime) {
+                timerBox.SetPercentage(sec / maxTime);
                 sec++;
             }
             else {
+                timer.Enabled = false;
                 finished = true;
                 RestoreTitles();
+                kolone[4][0].Text = asocijacije[4][0][0];
+                InsideColor = TextBoxRounded.Neutralna;
+                OnResult(kolone[4][0], false);
             }
         }
 
+        bool probano = false;
         bool finished = false;
         bool otvaranje = true;
-        void OnResult(TextBoxRounded textBox) {
+        Color InsideColor = TextBoxRounded.Plava;
+        void OnResult(TextBoxRounded textBox, bool addScore = true) {
+            probano = true;
             otvaranje = true;
             foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
                 if (textBox.Text == resenje) {
@@ -98,15 +107,17 @@ namespace Asocijacije {
                         for (int j = 0; j < 5; j++) {
                             if (j < 4 && !kolone[i][4 - j].Opened)
                                 score++;
-                            kolone[i][4 - j].Open(asocijacije[i][j][0], Color.FromArgb(32, 160, 254));
+                            if (!kolone[i][0].Opened)
+                                kolone[i][4 - j].Open(asocijacije[i][j][0], InsideColor);
                         }
                     }
                     if (textBox.K == 4) {
-                        kolone[4][0].Open(asocijacije[4][0][0], Color.FromArgb(32, 160, 254));
+                        kolone[4][0].Open(asocijacije[4][0][0], InsideColor);
                         finished = true;
                         score += 7;
                     }
-                    AddScore(scoreL, score);
+                    if (addScore)
+                        AddScore(scoreL, score);
                     textBox.Opened = true;
                     return;
                 }
@@ -130,8 +141,9 @@ namespace Asocijacije {
                 textBox.Text = asocijacije[textBox.K][textBox.B][0];
                 textBox.Opened = true;
             }
-            else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4) || SveOtvoreno()) && textBox.B == 4 && DifferentTextBox(textBox)) {
+            else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4) || SveOtvoreno()) && textBox.B == 4 && (probano || DifferentTextBox(textBox)) && !textBox.Opened && (OtvorenaKolona(textBox.K) || textBox.B == 4)) {
                 RestoreTitles();
+                probano = false;
                 backClick = false;
                 textBox.Enabled = true;
                 textBox.ResetText();
@@ -140,7 +152,7 @@ namespace Asocijacije {
                 RestoreTitles();
                 otvaranje = true;
             }
-            else if (!finished && (textBox.B < 4 || otvaranje) && DifferentTextBox(textBox))
+            else if (!finished && DifferentTextBox(textBox))
                 RestoreTitles();
 
             textBoxOld = textBox;
@@ -153,6 +165,10 @@ namespace Asocijacije {
                         return false;
                 }
             return true;
+        }
+
+        bool OtvorenaKolona(int k) {
+            return kolone[k].Any(x => x.Opened);
         }
 
         void AddScore(Label label, int score) {

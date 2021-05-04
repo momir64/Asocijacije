@@ -8,6 +8,9 @@ namespace Asocijacije {
     public partial class TextBoxRounded : UserControl {
         [DllImport("gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nheightRect, int nweightRect);
+        readonly public static Color Plava = Color.FromArgb(32, 160, 254);
+        readonly public static Color Crvena = Color.FromArgb(205, 0, 1);
+        readonly public static Color Neutralna = Color.FromArgb(0, 32, 105);
 
         public int K;
         public int B;
@@ -64,7 +67,7 @@ namespace Asocijacije {
             label.Focus();
         }
 
-        Color InsideColor = Color.FromArgb(0, 32, 105);
+        Color InsideColor = Neutralna;
         public void Open(string str, Color color) {
             Opened = true;
             InsideColor = color;
@@ -74,7 +77,7 @@ namespace Asocijacije {
         }
 
         public event ResultEventHandler ResultEvent;
-        public delegate void ResultEventHandler(TextBoxRounded textBox);
+        public delegate void ResultEventHandler(TextBoxRounded textBox, bool addScore = true);
         private void textBox_KeyPress(object sender, KeyPressEventArgs e) {
             if (e.KeyChar == '\r' && label.Text.Length > 0) {
                 label.Focus();
