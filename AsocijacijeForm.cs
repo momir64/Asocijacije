@@ -74,7 +74,7 @@ namespace Asocijacije {
         float sec = 1;
         bool started = false;
         private void Tick(object sender, EventArgs e) {
-            if (sec <= 120) {
+            if (!finished && sec <= 120) {
                 timerBox.SetPercentage(sec / 120);
                 sec++;
             }
@@ -130,7 +130,7 @@ namespace Asocijacije {
                 textBox.Text = asocijacije[textBox.K][textBox.B][0];
                 textBox.Opened = true;
             }
-            else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4)) && textBox.B == 4 && DifferentTextBox(textBox)) {
+            else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4) || SveOtvoreno()) && textBox.B == 4 && DifferentTextBox(textBox)) {
                 RestoreTitles();
                 backClick = false;
                 textBox.Enabled = true;
@@ -144,6 +144,15 @@ namespace Asocijacije {
                 RestoreTitles();
 
             textBoxOld = textBox;
+        }
+
+        bool SveOtvoreno() {
+            for (int i = 0; i < 4; i++)
+                for (int j = 1; j < 5; j++) {
+                    if (!kolone[i][j].Opened)
+                        return false;
+                }
+            return true;
         }
 
         void AddScore(Label label, int score) {
