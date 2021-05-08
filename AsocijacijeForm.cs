@@ -3,9 +3,6 @@ using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
 
-//neotkriveno 1
-//kolona 3
-//konačno 7
 namespace Asocijacije {
     public partial class AsocijacijeForm : PozadinaForm {
         readonly string[][][] asocijacije;
@@ -73,8 +70,8 @@ namespace Asocijacije {
         }
 
         float sec = 1;
-        int maxTime = 12;
         bool started = false;
+        readonly int maxTime = 120;
         private void Tick(object sender, EventArgs e) {
             if (!finished && sec <= maxTime) {
                 timerBox.SetPercentage(sec / maxTime);
