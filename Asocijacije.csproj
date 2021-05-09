@@ -58,6 +58,9 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CueTextBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DobroVečeForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -116,6 +119,7 @@
     </EmbeddedResource>
     <EmbeddedResource Include="AsocijacijeForm.resx">
       <DependentUpon>AsocijacijeForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="TextBoxRounded.resx">
       <DependentUpon>TextBoxRounded.cs</DependentUpon>
@@ -157,6 +161,12 @@
       <Isolated>False</Isolated>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Network\Network.csproj">
+      <Project>{91147cb0-5d5a-4c67-b295-482f0982a595}</Project>
+      <Name>Network</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

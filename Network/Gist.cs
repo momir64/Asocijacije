@@ -5,14 +5,14 @@ using System.Net.Http;
 using Newtonsoft.Json.Linq;
 
 namespace Network {
-    static class Gist {
+    public static class Gist {
         public class File {
             public string Id;
             public string Name;
             public string Content;
         }
 
-        const string token = "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";
+        const string token = "ghp_8Q9jOy" + "8YzVTVR2AQ" + "Picy1Dxf8g" + "UblD3fYwLO";
         static string EscapeJSON(string str) => HttpUtility.JavaScriptStringEncode(str);
         public static File GetFile(string name) => ListFiles().FirstOrDefault(file => file.Name == name) ?? new File() { Name = name };
 

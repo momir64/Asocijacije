@@ -17,8 +17,8 @@ namespace Asocijacije {
             MinimumSize = new Size(640, 360);
         }
 
-        public bool backBtnVisible { set { backBtn.Visible = value; } }
-        public EventHandler backBtnClick { set { backBtn.Click += value; } }
+        public bool BackBtnVisible { set { backBtn.Visible = value; } }
+        public EventHandler BackBtnClick { set { backBtn.Click += value; } }
 
         protected override void WndProc(ref Message m) {
             const uint gripSize = 5;
@@ -109,22 +109,22 @@ namespace Asocijacije {
             public int Bottom;
         }
 
-        private void close_Click(object sender, EventArgs e) {
-            Application.Exit();
+        private void Close_Click(object sender, EventArgs e) {
+            Environment.Exit(Environment.ExitCode);
         }
 
-        private void close_MouseEnter(object sender, EventArgs e) {
+        private void Close_MouseEnter(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = Color.FromArgb(217, 43, 46);
             base.OnMouseEnter(e);
         }
 
-        private void close_MouseLeave(object sender, EventArgs e) {
+        private void Close_MouseLeave(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = Color.FromArgb(0, 0, 0, 0);
         }
 
         public bool fullscreen = false;
 
-        public void fullscreen_Click(object sender, EventArgs e) {
+        public void Fullscreen_Click(object sender, EventArgs e) {
             fullscreen = !fullscreen;
             if (fullscreen) {
                 WindowState = FormWindowState.Maximized;
@@ -136,36 +136,36 @@ namespace Asocijacije {
             }
         }
 
-        private void fullscreen_MouseEnter(object sender, EventArgs e) {
+        private void Fullscreen_MouseEnter(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = titleButtonsGrayed;
         }
 
-        private void fullscreen_MouseLeave(object sender, EventArgs e) {
+        private void Fullscreen_MouseLeave(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = Color.FromArgb(0, 0, 0, 0);
         }
 
-        private void minimize_Click(object sender, EventArgs e) {
+        private void Minimize_Click(object sender, EventArgs e) {
             WindowState = FormWindowState.Minimized;
         }
 
-        private void minimize_MouseEnter(object sender, EventArgs e) {
+        private void Minimize_MouseEnter(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = titleButtonsGrayed;
         }
 
-        private void minimize_MouseLeave(object sender, EventArgs e) {
+        private void Minimize_MouseLeave(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = Color.FromArgb(0, 0, 0, 0);
         }
 
         private void MyForm_Resize(object sender, EventArgs e) {
             if (WindowState == FormWindowState.Normal && fullscreen == true)
-                fullscreen_Click(sender, e);
+                Fullscreen_Click(sender, e);
         }
 
-        private void backBtn_MouseEnter(object sender, EventArgs e) {
+        private void BackBtn_MouseEnter(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = titleButtonsGrayed;
         }
 
-        private void backBtn_MouseLeave(object sender, EventArgs e) {
+        private void BackBtn_MouseLeave(object sender, EventArgs e) {
             ((PictureBox)sender).BackColor = Color.FromArgb(0, 0, 0, 0);
         }
 

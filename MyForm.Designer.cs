@@ -50,9 +50,9 @@ namespace Asocijacije {
             this.closeBtn.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.closeBtn.TabIndex = 2;
             this.closeBtn.TabStop = false;
-            this.closeBtn.Click += new System.EventHandler(this.close_Click);
-            this.closeBtn.MouseEnter += new System.EventHandler(this.close_MouseEnter);
-            this.closeBtn.MouseLeave += new System.EventHandler(this.close_MouseLeave);
+            this.closeBtn.Click += new System.EventHandler(this.Close_Click);
+            this.closeBtn.MouseEnter += new System.EventHandler(this.Close_MouseEnter);
+            this.closeBtn.MouseLeave += new System.EventHandler(this.Close_MouseLeave);
             // 
             // fullscreenBtn
             // 
@@ -66,9 +66,9 @@ namespace Asocijacije {
             this.fullscreenBtn.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.fullscreenBtn.TabIndex = 2;
             this.fullscreenBtn.TabStop = false;
-            this.fullscreenBtn.Click += new System.EventHandler(this.fullscreen_Click);
-            this.fullscreenBtn.MouseEnter += new System.EventHandler(this.fullscreen_MouseEnter);
-            this.fullscreenBtn.MouseLeave += new System.EventHandler(this.fullscreen_MouseLeave);
+            this.fullscreenBtn.Click += new System.EventHandler(this.Fullscreen_Click);
+            this.fullscreenBtn.MouseEnter += new System.EventHandler(this.Fullscreen_MouseEnter);
+            this.fullscreenBtn.MouseLeave += new System.EventHandler(this.Fullscreen_MouseLeave);
             // 
             // minimizeBtn
             // 
@@ -82,9 +82,9 @@ namespace Asocijacije {
             this.minimizeBtn.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.minimizeBtn.TabIndex = 2;
             this.minimizeBtn.TabStop = false;
-            this.minimizeBtn.Click += new System.EventHandler(this.minimize_Click);
-            this.minimizeBtn.MouseEnter += new System.EventHandler(this.minimize_MouseEnter);
-            this.minimizeBtn.MouseLeave += new System.EventHandler(this.minimize_MouseLeave);
+            this.minimizeBtn.Click += new System.EventHandler(this.Minimize_Click);
+            this.minimizeBtn.MouseEnter += new System.EventHandler(this.Minimize_MouseEnter);
+            this.minimizeBtn.MouseLeave += new System.EventHandler(this.Minimize_MouseLeave);
             // 
             // backBtn
             // 
@@ -98,8 +98,8 @@ namespace Asocijacije {
             this.backBtn.TabIndex = 3;
             this.backBtn.TabStop = false;
             this.backBtn.Visible = false;
-            this.backBtn.MouseEnter += new System.EventHandler(this.backBtn_MouseEnter);
-            this.backBtn.MouseLeave += new System.EventHandler(this.backBtn_MouseLeave);
+            this.backBtn.MouseEnter += new System.EventHandler(this.BackBtn_MouseEnter);
+            this.backBtn.MouseLeave += new System.EventHandler(this.BackBtn_MouseLeave);
             // 
             // MyForm
             // 

@@ -3,14 +3,16 @@ using System.Net;
 using System.Linq;
 using System.Text;
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Network {
     public class Stinto {
-        const int waitTime = 5000;
+        const int waitTime = 3000;
         const char delimeter = '\uFFFF';
         const string talktome = "talktome";
+        const string areyoufree = "areyoufree";
         const string yeahimhere = "yeahimhere";
         const string notrightnow = "notrightnow";
 
@@ -27,6 +29,7 @@ namespace Network {
         void CreateRoom() {
             using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/+")) {
                 uri = client.SendAsync(request).Result.RequestMessage.RequestUri;
+                Clipboard.SetText(uri.ToString());
             }
             using (var request = new HttpRequestMessage(new HttpMethod("GET"), uri)) {
                 HttpResponseMessage response = client.SendAsync(request).Result;
@@ -63,7 +66,7 @@ namespace Network {
             GetLastIndex();
             while (true) {
                 using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
-                    HttpResponseMessage response = await client.SendAsync(request);
+                    HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
                     string result = DecodeUri(await response.Content.ReadAsStringAsync());
                     foreach (string line in result.Trim().Split('\n')) {
                         index++;
@@ -108,57 +111,93 @@ namespace Network {
 
         string message;
         bool waitMessage = false;
+        public event ConnectEventHandler OnConnect;
+        public delegate void ConnectEventHandler();
         public event MessageEventHandler MessageEvent;
         public delegate void MessageEventHandler(string message);
         readonly ManualResetEvent SignalConnectEvent = new ManualResetEvent(false);
         readonly ManualResetEvent SignalMessageEvent = new ManualResetEvent(false);
         readonly ManualResetEvent SignalMessageEventBack = new ManualResetEvent(false);
-        async void MessageReader() {
-            while (true) {
-                using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
-                    HttpResponseMessage response = await client.SendAsync(request);
-                    string result = DecodeUri(await response.Content.ReadAsStringAsync());
-                    if (result.Length == 0)
-                        continue;
-                    foreach (string line in result.Trim().Split('\n')) {
-                        index++;
-                        string[] words = line.Split('\t');
-                        if (words[2] != me) {
-                            if (words[3] == "t") {
-                                string[] message = words[4].Split(delimeter);
-                                if (message[0] == "private" && message[1] == talktome && ConnectManager) {
-                                    if (Connected)
-                                        SendPrivateMessage(notrightnow + delimeter + message[2]);
-                                    else {
-                                        SendPrivateMessage(yeahimhere + delimeter + message[2]);
-                                        kolega = message[2];
-                                        Connected = true;
-                                        SignalConnectEvent.Set();
+        readonly ManualResetEvent SignalMessageEventWait = new ManualResetEvent(false);
+        void MessageReader() {
+            new Task(() => {
+                while (true) {
+                    if (MessageEvent == null && !waitMessage) {
+                        SignalMessageEventWait.WaitOne();
+                        SignalMessageEventWait.Reset();
+                    }
+                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
+                        HttpResponseMessage response = client.SendAsync(request).Result;
+                        string result = DecodeUri(response.Content.ReadAsStringAsync().Result);
+                        if (MessageEvent == null)
+                            result = result.Trim().Split('\n')[0];
+                        if (result.Length == 0)
+                            continue;
+                        foreach (string line in result.Trim().Split('\n')) {
+                            index++;
+                            string[] words = line.Split('\t');
+                            if (words[2] != me) {
+                                if (words[3] == "t") {
+                                    string[] message = words[4].Split(delimeter);
+                                    if (message[0] == "public") {
+                                        MessageEvent?.Invoke(message[1]);
+                                        if (waitMessage) {
+                                            this.message = message[1];
+                                            SignalMessageEvent.Set();
+                                            SignalMessageEventBack.WaitOne();
+                                            SignalMessageEventBack.Reset();
+                                        }
                                     }
                                 }
-                                else if (message[0] == "public") {
-                                    MessageEvent?.Invoke(message[1]);
-                                    if (waitMessage) {
-                                        this.message = message[1];
-                                        SignalMessageEvent.Set();
-                                        SignalMessageEventBack.WaitOne();
-                                        SignalMessageEventBack.Reset();
-                                    }
+                                else if (words[3] == "x" && words[2] == kolega) {
+                                    SignalConnectEvent.Reset();
+                                    Connected = false;
+                                    while (!Connected)
+                                        Connected = Connect();
                                 }
-                            }
-                            else if (words[3] == "x" && words[2] == kolega) {
-                                SignalConnectEvent.Reset();
-                                Connected = false;
-                                while (!Connected)
-                                    Connected = Connect();
                             }
                         }
                     }
                 }
-            }
+            }).Start();
+        }
+
+        void ConnectManager() {
+            new Task(() => {
+                int index = 0;
+                while (true) {
+                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
+                        HttpResponseMessage response = client.SendAsync(request).Result;
+                        string result = DecodeUri(response.Content.ReadAsStringAsync().Result);
+                        if (result.Length == 0)
+                            continue;
+                        foreach (string line in result.Trim().Split('\n')) {
+                            index++;
+                            string[] words = line.Split('\t');
+                            if (words[2] != me && words[3] == "t") {
+                                string[] message = words[4].Split(delimeter);
+                                if (message[0] == "private" && (message[1] == talktome || message[1] == areyoufree)) {
+                                    if (Connected)
+                                        SendPrivateMessage(notrightnow + delimeter + message[2]);
+                                    else {
+                                        SendPrivateMessage(yeahimhere + delimeter + message[2]);
+                                        if (message[1] == talktome) {
+                                            kolega = message[2];
+                                            Connected = true;
+                                            new Task(() => { OnConnect?.Invoke(); }).Start();
+                                            SignalConnectEvent.Set();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }).Start();
         }
 
         public string ReadMessage() {
+            SignalMessageEventWait.Set();
             waitMessage = true;
             SignalMessageEvent.WaitOne();
             SignalMessageEvent.Reset();
@@ -169,8 +208,7 @@ namespace Network {
         }
 
         public void Wait4Connect() {
-            if (Connected || !ConnectManager)
-                return;
+            if (Connected) return;
             SignalConnectEvent.WaitOne();
         }
 
@@ -178,25 +216,23 @@ namespace Network {
         int index;
         string me, kolega;
         readonly HttpClient client;
-        readonly bool ConnectManager;
         readonly CookieContainer cookies;
         readonly HttpClientHandler handler;
         public string Room { get; private set; }
         public bool Connected { get; private set; }
 
         public Stinto() {
-            ConnectManager = true;
             cookies = new CookieContainer();
             handler = new HttpClientHandler { CookieContainer = cookies };
             client = new HttpClient(handler);
             CreateRoom();
             LogIn2Room();
+            ConnectManager();
             MessageReader();
         }
 
         public Stinto(string room) {
             Room = room;
-            ConnectManager = false;
             cookies = new CookieContainer();
             handler = new HttpClientHandler { CookieContainer = cookies };
             client = new HttpClient(handler);

@@ -11,15 +11,15 @@ namespace Asocijacije {
             InitializeComponent();
         }
 
-        Bitmap background = new Bitmap(1280, 720);
-        Bitmap background2 = new Bitmap(1280, 720);
+        readonly Bitmap background = new Bitmap(1280, 720);
+        readonly Bitmap background2 = new Bitmap(1280, 720);
         private void PozadinaForm_Load(object sender, EventArgs e) {
             titleButtonsGrayed = Color.FromArgb(30, 50, 111);
-            backBtnClick = new EventHandler(back_Click);
-            backBtnVisible = true;
+            BackBtnClick = new EventHandler(Back_Click);
+            BackBtnVisible = true;
             if (Owner != null)
                 if (Owner.WindowState == FormWindowState.Maximized)
-                    fullscreen_Click(sender, e);
+                    Fullscreen_Click(sender, e);
                 else {
                     Height = Owner.Height;
                     Width = Owner.Width;
@@ -35,7 +35,7 @@ namespace Asocijacije {
         long lastClick = 0;
         bool playing = false;
         int frameCount = 0, currentFrame = 0;
-        Bitmap eggImg = Properties.Resources.levi4;
+        readonly Bitmap eggImg = Properties.Resources.levi4;
         protected override void WndProc(ref Message m) {
             const int WM_NCLBUTTONDOWN = 0x00A1;
             base.WndProc(ref m);
@@ -56,15 +56,15 @@ namespace Asocijacije {
             }
         }
 
-        private void back_Click(object sender, EventArgs e) {
+        private void Back_Click(object sender, EventArgs e) {
             Owner.Show();
             if (((DobroVečeForm)Owner).fullscreen)
-                ((DobroVečeForm)Owner).fullscreen_Click(sender, e);
+                ((DobroVečeForm)Owner).Fullscreen_Click(sender, e);
             Owner.Left = Left;
             Owner.Top = Top;
             ((DobroVečeForm)Owner).Center();
             if (fullscreen)
-                ((DobroVečeForm)Owner).fullscreen_Click(sender, e);
+                ((DobroVečeForm)Owner).Fullscreen_Click(sender, e);
             else {
                 Owner.Height = Height;
                 Owner.Width = Width;

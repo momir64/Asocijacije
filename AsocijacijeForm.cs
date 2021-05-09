@@ -87,6 +87,15 @@ namespace Asocijacije {
             }
         }
 
+        private readonly static string[] lat = { "ДЖ", "НЈ", "ЛЈ" };
+        private readonly static string[] cir = { "Џ", "Њ", "Љ" };
+        private static string IspraviCir(string text) {
+            text = text.ToUpper();
+            for (int i = 0; i < lat.Length; i++)
+                text = text.Replace(lat[i], cir[i]);
+            return text;
+        }
+
         bool probano = false;
         bool finished = false;
         bool otvaranje = true;
@@ -95,7 +104,7 @@ namespace Asocijacije {
             probano = true;
             otvaranje = true;
             foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
-                if (textBox.Text == resenje) {
+                if (IspraviCir(textBox.Text) == resenje) {
                     int score = 0;
                     for (int i = textBox.K == 4 ? 0 : textBox.K; i < (textBox.K == 4 ? 4 : textBox.K + 1); i++) {
                         probajKonacno = true;

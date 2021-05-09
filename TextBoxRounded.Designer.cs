@@ -15,7 +15,7 @@ namespace Asocijacije {
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing) {
-            label.Click -= new EventHandler(onClick);
+            label.Click -= new EventHandler(OnClick);
             if (disposing && (components != null)) {
                 components.Dispose();
             }
@@ -44,8 +44,8 @@ namespace Asocijacije {
             this.label.TabIndex = 0;
             this.label.Text = "ПРОБА";
             this.label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.label.Click += new System.EventHandler(this.onClick);
-            this.label.TextChanged += new System.EventHandler(this.label_TextChanged);
+            this.label.Click += new System.EventHandler(this.OnClick);
+            this.label.TextChanged += new System.EventHandler(this.Label_TextChanged);
             // 
             // textBox
             // 
@@ -55,7 +55,7 @@ namespace Asocijacije {
             this.textBox.Name = "textBox";
             this.textBox.Size = new System.Drawing.Size(1, 8);
             this.textBox.TabIndex = 1;
-            this.textBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.textBox_KeyPress);
+            this.textBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.TextBox_KeyPress);
             // 
             // TextBoxRounded
             // 

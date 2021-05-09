@@ -44,7 +44,7 @@ namespace Asocijacije {
             UpdateDimensions(parent);
         }
 
-        private float FontSize = 0.4f;
+        private readonly float FontSize = 0.4f;
         public void UpdateDimensions(Form parent) {
             double x = this.x / 1280 * parent.Width;
             double y = this.y / 720 * parent.Height;
@@ -78,7 +78,7 @@ namespace Asocijacije {
 
         public event ResultEventHandler ResultEvent;
         public delegate void ResultEventHandler(TextBoxRounded textBox, bool addScore = true);
-        private void textBox_KeyPress(object sender, KeyPressEventArgs e) {
+        private void TextBox_KeyPress(object sender, KeyPressEventArgs e) {
             if (e.KeyChar == '\r' && label.Text.Length > 0) {
                 label.Focus();
                 ResultEvent(this);
@@ -91,8 +91,8 @@ namespace Asocijacije {
             e.Handled = true;
         }
 
-        private static char[] lat = { 'Q', 'W', 'X', 'Y', 'A', 'B', 'V', 'G', 'D', 'Đ', 'E', 'Ž', 'Z', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'Ć', 'U', 'F', 'H', 'C', 'Č', 'Š' };
-        private static char[] cir = { 'Љ', 'Њ', 'Џ', 'И', 'А', 'Б', 'В', 'Г', 'Д', 'Ђ', 'Е', 'Ж', 'З', 'И', 'Ј', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'Ћ', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш' };
+        private static readonly char[] lat = { 'Q', 'W', 'X', 'Y', 'A', 'B', 'V', 'G', 'D', 'Đ', 'E', 'Ž', 'Z', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'Ć', 'U', 'F', 'H', 'C', 'Č', 'Š' };
+        private static readonly char[] cir = { 'Љ', 'Њ', 'Џ', 'И', 'А', 'Б', 'В', 'Г', 'Д', 'Ђ', 'Е', 'Ж', 'З', 'И', 'Ј', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'Ћ', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш' };
         public char Lat2Cir(char c) {
             c = char.ToUpper(c);
             if (lat.Contains(c))
@@ -100,7 +100,7 @@ namespace Asocijacije {
             return c;
         }
 
-        private void label_TextChanged(object sender, EventArgs e) {
+        private void Label_TextChanged(object sender, EventArgs e) {
             while (label.Width * 0.9 > TextRenderer.MeasureText(label.Text, new Font(label.Font.FontFamily, label.Font.Size, label.Font.Style)).Width && label.Font.Size < Height * FontSize)
                 label.Font = new Font(label.Font.FontFamily, label.Font.Size + 0.5f, label.Font.Style);
             while (label.Width * 0.9 < TextRenderer.MeasureText(label.Text, new Font(label.Font.FontFamily, label.Font.Size, label.Font.Style)).Width)
@@ -133,7 +133,7 @@ namespace Asocijacije {
             }
         }
 
-        private void onClick(object sender, EventArgs e) => base.OnClick(e);
+        private void OnClick(object sender, EventArgs e) => base.OnClick(e);
         public override string Text {
             set => label.Text = value;
             get => label.Text;
