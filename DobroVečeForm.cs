@@ -41,7 +41,7 @@ namespace Asocijacije {
                     Invoke(new MethodInvoker(delegate () {
                         playBtn.Enabled = true;
                         HideLoader();
-                        MessageBox.Show("Ime je zauzeto!");
+                        MessageBox.Show("Име је заузето!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }));
                 }
                 else {
@@ -67,7 +67,7 @@ namespace Asocijacije {
         private void Connected() {
             DeleteFile(MyName);
             string kolega = chat.ReadMessage();
-            KamenPapirMakaze(true);
+            string datum = ParNepar(true);
         }
 
         void ShowLoader() {
@@ -182,12 +182,13 @@ namespace Asocijacije {
                         Invoke(new MethodInvoker(delegate () {
                             HideLoader();
                         }));
-                        KamenPapirMakaze(false);
+                        string datum = ParNepar(false);
                     }
                     else {
+                        DeleteFile(kolega);
                         Invoke(new MethodInvoker(delegate () {
                             HideLoader();
-                            MessageBox.Show("Igrač nije više dostupan!");
+                            MessageBox.Show("Играч није више доступан!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }));
                     }
                 }).Start();
@@ -195,7 +196,7 @@ namespace Asocijacije {
         }
 
         bool prvi;
-        private void KamenPapirMakaze(bool whoami) {
+        private string ParNepar(bool whoami) {
             string datum;
             string mojIzbor = new Random().Next(2).ToString();
             chat.SendMessage(mojIzbor);
@@ -205,10 +206,9 @@ namespace Asocijacije {
                 datum = GetRandomDate();
                 chat.SendMessage(datum);
             }
-            else {
+            else
                 datum = chat.ReadMessage();
-            }
-            MessageBox.Show(prvi + " " + datum);
+            return datum;
         }
 
         void UpdateList() {
