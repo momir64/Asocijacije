@@ -1,13 +1,19 @@
 ﻿using System;
+using Network;
 using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace Asocijacije {
     public partial class AsocijacijeForm : PozadinaForm {
+        bool prvi;
+        Stinto chat;
         readonly string[][][] asocijacije;
-        public AsocijacijeForm(string[][][] asocijacije) {
+        public AsocijacijeForm(string[][][] asocijacije, Stinto chat, bool prvi) {
             this.asocijacije = asocijacije;
+            this.chat = chat;
+            this.prvi = prvi;
+            MessageBox.Show(asocijacije[4][0][0] + " " + prvi, "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Information);
             InitializeComponent();
         }
 

@@ -65,9 +65,21 @@ namespace Asocijacije {
         }
 
         private void Connected() {
-            DeleteFile(MyName);
-            string kolega = chat.ReadMessage();
-            string datum = ParNepar(true);
+            Invoke(new MethodInvoker(delegate () {
+                ShowLoader();
+            }));
+            new Thread(async () => {
+                DeleteFile(MyName);
+                string kolega = chat.ReadMessage();
+                string datum = ParNepar(true);
+                string[][][] asocijacije = ParseData(await GetData(datum));
+                Invoke(new MethodInvoker(delegate () {
+                    new AsocijacijeForm(asocijacije, chat, prvi).Show(this);
+                    Task.Delay(20).Wait();
+                    Hide();
+                    HideLoader();
+                }));
+            }).Start();
         }
 
         void ShowLoader() {
@@ -79,14 +91,6 @@ namespace Asocijacije {
 
         void HideLoader() {
             loader.Visible = false;
-        }
-
-        async Task LoadAndOpen() {
-            ShowLoader();
-            new AsocijacijeForm(ParseData(await GetData(GetRandomDate()))).Show(this);
-            Task.Delay(20).Wait();
-            Hide();
-            HideLoader();
         }
 
         bool unetoIme = false;
@@ -174,15 +178,19 @@ namespace Asocijacije {
             if (index != ListBox.NoMatches) {
                 string kolega = listBox.Items[index].ToString();
                 ShowLoader();
-                new Thread(() => {
+                new Thread(async () => {
                     chat = new Stinto(ReadFile(kolega).Content);
                     if (chat.Connected) {
                         DeleteFile(MyName);
                         chat.SendMessage(MyName);
+                        string datum = ParNepar(false);
+                        string[][][] asocijacije = ParseData(await GetData(datum));
                         Invoke(new MethodInvoker(delegate () {
+                            new AsocijacijeForm(asocijacije, chat, prvi).Show(this);
+                            Task.Delay(20).Wait();
+                            Hide();
                             HideLoader();
                         }));
-                        string datum = ParNepar(false);
                     }
                     else {
                         DeleteFile(kolega);
