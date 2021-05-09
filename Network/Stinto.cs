@@ -5,7 +5,6 @@ using System.Text;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace Network {
     public class Stinto {
@@ -29,7 +28,6 @@ namespace Network {
         void CreateRoom() {
             using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/+")) {
                 uri = client.SendAsync(request).Result.RequestMessage.RequestUri;
-                Clipboard.SetText(uri.ToString());
             }
             using (var request = new HttpRequestMessage(new HttpMethod("GET"), uri)) {
                 HttpResponseMessage response = client.SendAsync(request).Result;

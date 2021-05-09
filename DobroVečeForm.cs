@@ -29,35 +29,39 @@ namespace Asocijacije {
             playBtn.Enabled = false;
         }
 
-        bool once = true;
-        //private void PlayBtn_Click(object sender, EventArgs e) {
-        //    if (once) {
-        //        once = false;
-        //        _ = LoadAndOpen();
-        //    }
-        //}
-
         Stinto chat;
         File[] list;
         string MyName { get => nameBox.Text; }
         private void PlayBtn_Click(object sender, EventArgs e) {
-            list = ListFiles();
-            if (list.Any(file => file.Name == MyName)) {
-                MessageBox.Show("Ime je zauzeto!");
-            }
-            else {
-                chat = new Stinto();
-                chat.OnConnect += Connected;
-                CreateFile(MyName, chat.Room);
-                listBox.Items.Clear();
-                foreach (File file in list)
-                    listBox.Items.Add(file.Name);
-                UpdateList();
-                CleanList();
-                BackBtnVisible = true;
-                unetoIme = true;
-                OnResize(e);
-            }
+            playBtn.Enabled = false;
+            ShowLoader();
+            Task.Run(() => {
+                list = ListFiles();
+                if (list.Any(file => file.Name == MyName)) {
+                    Invoke(new MethodInvoker(delegate () {
+                        playBtn.Enabled = true;
+                        HideLoader();
+                        MessageBox.Show("Ime je zauzeto!");
+                    }));
+                }
+                else {
+                    chat = new Stinto();
+                    chat.OnConnect += Connected;
+                    CreateFile(MyName, chat.Room);
+                    Invoke(new MethodInvoker(delegate () {
+                        playBtn.Enabled = true;
+                        HideLoader();
+                        listBox.Items.Clear();
+                        foreach (File file in list)
+                            listBox.Items.Add(file.Name);
+                        BackBtnVisible = true;
+                        unetoIme = true;
+                        OnResize(e);
+                        UpdateList();
+                        CleanList();
+                    }));
+                }
+            });
         }
 
         private void Connected() {
@@ -66,16 +70,23 @@ namespace Asocijacije {
             KamenPapirMakaze(true);
         }
 
-        async Task LoadAndOpen() {
+        void ShowLoader() {
             float size = 0.2f;
             loader.Visible = true;
             loader.Location = Point.Round(new PointF(Width / 2 - Height * size / 2, Height / 2 - Height * size / 2));
             loader.Size = Size.Round(new SizeF(Height * size, Height * size));
+        }
+
+        void HideLoader() {
+            loader.Visible = false;
+        }
+
+        async Task LoadAndOpen() {
+            ShowLoader();
             new AsocijacijeForm(ParseData(await GetData(GetRandomDate()))).Show(this);
             Task.Delay(20).Wait();
             Hide();
-            loader.Visible = false;
-            once = true;
+            HideLoader();
         }
 
         bool unetoIme = false;
@@ -145,7 +156,8 @@ namespace Asocijacije {
                 nameBox.SelectionStart = 0;
                 nameBox.SelectionLength = MyName.Length;
             }
-            playBtn.Enabled = MyName.Length > 0;
+            if (e.KeyChar != '\r')
+                playBtn.Enabled = MyName.Length > 0;
             e.Handled = true;
         }
 
@@ -161,15 +173,24 @@ namespace Asocijacije {
             int index = listBox.IndexFromPoint(e.Location);
             if (index != ListBox.NoMatches) {
                 string kolega = listBox.Items[index].ToString();
-                chat = new Stinto(ReadFile(kolega).Content);
-                if (chat.Connected) {
-                    DeleteFile(MyName);
-                    chat.SendMessage(MyName);
-                    KamenPapirMakaze(false);
-                }
-                else {
-                    MessageBox.Show("Igrač nije više dostupan!");
-                }
+                ShowLoader();
+                new Thread(() => {
+                    chat = new Stinto(ReadFile(kolega).Content);
+                    if (chat.Connected) {
+                        DeleteFile(MyName);
+                        chat.SendMessage(MyName);
+                        Invoke(new MethodInvoker(delegate () {
+                            HideLoader();
+                        }));
+                        KamenPapirMakaze(false);
+                    }
+                    else {
+                        Invoke(new MethodInvoker(delegate () {
+                            HideLoader();
+                            MessageBox.Show("Igrač nije više dostupan!");
+                        }));
+                    }
+                }).Start();
             }
         }
 

@@ -60,7 +60,7 @@ namespace Network {
                     request.Headers.Add("Authorization", "token " + token);
                     HttpResponseMessage response = httpClient.SendAsync(request).Result;
                     JObject result = JObject.Parse(response.Content.ReadAsStringAsync().Result);
-                    file.Content = result["files"].First.First["content"].ToString();
+                    file.Content = result["files"]?.First.First["content"].ToString() ?? ReadFile(file).Content;
                     return file;
                 }
             }
