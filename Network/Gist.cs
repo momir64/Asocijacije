@@ -25,6 +25,8 @@ namespace Network {
                     JArray result = JArray.Parse(response.Content.ReadAsStringAsync().Result);
                     File[] files = new File[result.Count];
                     for (int i = 0; i < files.Length; i++) {
+                        if (result[i]["files"].First == null)
+                            continue;
                         files[i] = new File {
                             Id = result[i]["id"].ToString(),
                             Name = (result[i]["files"].First as JProperty).Name

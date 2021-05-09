@@ -16,11 +16,11 @@ namespace Network {
         const string yeahimhere = "yeahimhere";
         const string notrightnow = "notrightnow";
 
-        readonly Random random = new Random();
+        static readonly Random random = new Random();
         const string chars = "abcdefghijklmnopqrstuvwxyz";
         static string EncodeUri(string str) => Uri.EscapeDataString(str);
         static string DecodeUri(string str) => Uri.UnescapeDataString(str);
-        string RandomString(int length) => new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+        static string RandomString(int length) => new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
         string GetStringBetween(string str, string a, string b) {
             int start = str.IndexOf(a) + a.Length;
             return str.Substring(start, str.Substring(start).IndexOf(b));
@@ -73,13 +73,15 @@ namespace Network {
                         string[] words = line.Split('\t');
                         if (words[3] == "t") {
                             string[] message = words[4].Split(delimeter);
-                            if (message[0] == "private" && message[1] == yeahimhere && message[2] == me) {
-                                kolega = words[2];
-                                return;
-                            }
-                            else if (message[0] == "private" && message[1] == notrightnow && message[2] == me) {
-                                kolega = null;
-                                return;
+                            if (message[0] == "private" && message[2] == me) {
+                                if (message[1] == yeahimhere) {
+                                    kolega = words[2];
+                                    return;
+                                }
+                                else if (message[1] == notrightnow) {
+                                    kolega = null;
+                                    return;
+                                }
                             }
                         }
                     }
@@ -120,7 +122,7 @@ namespace Network {
         readonly ManualResetEvent SignalMessageEventBack = new ManualResetEvent(false);
         readonly ManualResetEvent SignalMessageEventWait = new ManualResetEvent(false);
         void MessageReader() {
-            new Task(() => {
+            Task.Run(() => {
                 while (true) {
                     if (MessageEvent == null && !waitMessage) {
                         SignalMessageEventWait.WaitOne();
@@ -159,11 +161,11 @@ namespace Network {
                         }
                     }
                 }
-            }).Start();
+            });
         }
 
         void ConnectManager() {
-            new Task(() => {
+            Task.Run(() => {
                 int index = 0;
                 while (true) {
                     using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
@@ -184,7 +186,7 @@ namespace Network {
                                         if (message[1] == talktome) {
                                             kolega = message[2];
                                             Connected = true;
-                                            new Task(() => { OnConnect?.Invoke(); }).Start();
+                                            Task.Run(() => { OnConnect?.Invoke(); });
                                             SignalConnectEvent.Set();
                                         }
                                     }
@@ -193,7 +195,7 @@ namespace Network {
                         }
                     }
                 }
-            }).Start();
+            });
         }
 
         public string ReadMessage() {
@@ -240,6 +242,63 @@ namespace Network {
             Connected = Connect();
             if (Connected)
                 MessageReader();
+        }
+
+        static async Task<bool> WaitPing(HttpClient client, string room, string me, int index) {
+            while (true) {
+                using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + room + "/poll?seq=" + index)) {
+                    HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
+                    string result = DecodeUri(await response.Content.ReadAsStringAsync());
+                    foreach (string line in result.Trim().Split('\n')) {
+                        index++;
+                        string[] words = line.Split('\t');
+                        if (words[3] == "t") {
+                            string[] message = words[4].Split(delimeter);
+                            if (message[0] == "private" && message[2] == me) {
+                                if (message[1] == yeahimhere)
+                                    return true;
+                                else if (message[1] == notrightnow)
+                                    return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static bool Ping(string room) {
+            int index;
+            string me;
+            CookieContainer cookies = new CookieContainer();
+            using (HttpClientHandler handler = new HttpClientHandler { CookieContainer = cookies }) {
+                using (HttpClient client = new HttpClient(handler)) {
+                    while (true) {
+                        me = RandomString(6);
+                        using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + room + "/login")) {
+                            request.Content = new StringContent("nick=" + me + "&termsOfUse=true", Encoding.UTF8, "application/x-www-form-urlencoded");
+                            if (client.SendAsync(request).Result.IsSuccessStatusCode) break;
+                        }
+                    }
+                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + room + "/poll?seq=-2")) {
+                        HttpResponseMessage response = client.SendAsync(request).Result;
+                        string result = response.Content.ReadAsStringAsync().Result;
+                        string[] lines = result.Substring(0, result.IndexOf("\n0")).Split('\n');
+                        lines = lines.Take(lines.Length - 1).Where(line => line.Split('\t')[6] == me && line.Split('\t')[8] == "false").ToArray();
+                        me = lines[0].Split('\t')[4];
+                    }
+                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + room + "/poll?seq=0")) {
+                        HttpResponseMessage response = client.SendAsync(request).Result;
+                        string result = response.Content.ReadAsStringAsync().Result.Trim();
+                        index = Convert.ToInt32(result.Split('\n').Last().Split('\t')[0], 16);
+                    }
+                    using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + room + "/post")) {
+                        request.Content = new StringContent("type=TXT&text=private" + delimeter + areyoufree + delimeter + me, Encoding.UTF8, "application/x-www-form-urlencoded");
+                        client.SendAsync(request).Wait();
+                    }
+                    Task<bool> task = WaitPing(client, room, me, index);
+                    return task.Wait(waitTime) && task.Result;
+                }
+            }
         }
     }
 }

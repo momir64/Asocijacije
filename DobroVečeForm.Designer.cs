@@ -24,13 +24,11 @@ namespace Asocijacije {
         /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent() {
-            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DobroVečeForm));
             this.playBtn = new System.Windows.Forms.Button();
             this.loader = new System.Windows.Forms.PictureBox();
             this.nameBox = new Asocijacije.CueTextBox();
             this.listBox = new System.Windows.Forms.ListBox();
-            this.UpdateListTimer = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.loader)).BeginInit();
             this.SuspendLayout();
             // 
@@ -79,17 +77,11 @@ namespace Asocijacije {
             this.listBox.TabIndex = 3;
             this.listBox.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.ListBox_MouseDoubleClick);
             // 
-            // UpdateList
-            // 
-            this.UpdateListTimer.Enabled = true;
-            this.UpdateListTimer.Interval = 1000;
-            this.UpdateListTimer.Tick += new System.EventHandler(this.UpdateList);
-            // 
             // DobroVečeForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackgroundImage = global::Asocijacije.Properties.Resources.dobroveče;
+            this.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("$this.BackgroundImage")));
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.ClientSize = new System.Drawing.Size(1280, 720);
             this.Controls.Add(this.nameBox);
@@ -116,6 +108,5 @@ namespace Asocijacije {
         private System.Windows.Forms.PictureBox loader;
         private CueTextBox nameBox;
         private System.Windows.Forms.ListBox listBox;
-        private System.Windows.Forms.Timer UpdateListTimer;
     }
 }

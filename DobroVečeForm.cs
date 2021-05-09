@@ -6,6 +6,7 @@ using static Network.Gist;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using static Asocijacije.SlagalicaTV;
+using System.Threading;
 
 namespace Asocijacije {
     public partial class DobroVečeForm : MyForm {
@@ -37,9 +38,10 @@ namespace Asocijacije {
         //}
 
         Stinto chat;
+        File[] list;
         string MyName { get => nameBox.Text; }
         private void PlayBtn_Click(object sender, EventArgs e) {
-            File[] list = ListFiles();
+            list = ListFiles();
             if (list.Any(file => file.Name == MyName)) {
                 MessageBox.Show("Ime je zauzeto!");
             }
@@ -50,6 +52,8 @@ namespace Asocijacije {
                 listBox.Items.Clear();
                 foreach (File file in list)
                     listBox.Items.Add(file.Name);
+                UpdateList();
+                CleanList();
                 BackBtnVisible = true;
                 unetoIme = true;
                 OnResize(e);
@@ -57,6 +61,7 @@ namespace Asocijacije {
         }
 
         private void Connected() {
+            DeleteFile(MyName);
             string kolega = chat.ReadMessage();
             KamenPapirMakaze(true);
         }
@@ -118,6 +123,7 @@ namespace Asocijacije {
             if (e.KeyChar == '\r' && playBtn.Enabled) {
                 PlayBtn_Click(sender, new EventArgs());
                 e.Handled = true;
+                nameBox.SelectionLength = 0;
             }
             else if (e.KeyChar == '\b' && MyName.Length > 0) {
                 if (SelectionLength > 0) {
@@ -128,18 +134,23 @@ namespace Asocijacije {
                     nameBox.Text = MyName.Remove(SelectionStart - 1, 1);
                     nameBox.SelectionStart = SelectionStart - 1;
                 }
+                nameBox.SelectionLength = 0;
             }
-            else if ((char.IsLetter(e.KeyChar) || e.KeyChar == ' ') && MyName.Length <= MaxLength) {
+            else if ((char.IsLetter(e.KeyChar) || lat.Contains(e.KeyChar) || e.KeyChar == ' ') && MyName.Length <= MaxLength) {
                 nameBox.Text = MyName.Substring(0, SelectionStart) + Lat2Cir(e.KeyChar) + MyName.Substring(SelectionStart + SelectionLength);
                 nameBox.SelectionStart = SelectionStart + 1;
+                nameBox.SelectionLength = 0;
             }
-            playBtn.Enabled = MyName.Length > 1;
-            nameBox.SelectionLength = 0;
+            else if (e.KeyChar == '\u0001') {
+                nameBox.SelectionStart = 0;
+                nameBox.SelectionLength = MyName.Length;
+            }
+            playBtn.Enabled = MyName.Length > 0;
             e.Handled = true;
         }
 
-        private static readonly char[] lat = { 'q', 'w', 'x', 'y', 'a', 'b', 'v', 'g', 'd', 'đ', 'e', 'ž', 'z', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'ć', 'u', 'f', 'h', 'c', 'č', 'š', 'Q', 'W', 'X', 'Y', 'A', 'B', 'V', 'G', 'D', 'Đ', 'E', 'Ž', 'Z', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'Ć', 'U', 'F', 'H', 'C', 'Č', 'Š' };
-        private static readonly char[] cir = { 'љ', 'њ', 'џ', 'и', 'а', 'б', 'в', 'г', 'д', 'ђ', 'е', 'ж', 'з', 'и', 'ј', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'ћ', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'Љ', 'Њ', 'Џ', 'И', 'А', 'Б', 'В', 'Г', 'Д', 'Ђ', 'Е', 'Ж', 'З', 'И', 'Ј', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'Ћ', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш' };
+        private static readonly char[] lat = { 'q', 'w', 'x', 'y', 'a', 'b', 'v', 'g', 'd', 'đ', 'e', 'ž', 'z', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'ć', 'u', 'f', 'h', 'c', 'č', 'š', 'Q', 'W', 'X', 'Y', 'A', 'B', 'V', 'G', 'D', 'Đ', 'E', 'Ž', 'Z', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'Ć', 'U', 'F', 'H', 'C', 'Č', 'Š', '{', '}', ':', '"', '|', '[', ']', ';', '\'', '\\' };
+        private static readonly char[] cir = { 'љ', 'њ', 'џ', 'и', 'а', 'б', 'в', 'г', 'д', 'ђ', 'е', 'ж', 'з', 'и', 'ј', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'ћ', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'Љ', 'Њ', 'Џ', 'И', 'А', 'Б', 'В', 'Г', 'Д', 'Ђ', 'Е', 'Ж', 'З', 'И', 'Ј', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'Ћ', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Ш', 'Ђ', 'Ч', 'Ћ', 'Ж', 'ш', 'ђ', 'ч', 'ћ', 'ж' };
         public char Lat2Cir(char c) {
             if (lat.Contains(c))
                 return cir[Array.IndexOf(lat, c)];
@@ -179,16 +190,40 @@ namespace Asocijacije {
             MessageBox.Show(prvi + " " + datum);
         }
 
-        private void UpdateList(object sender, EventArgs e) {
-            File[] list = ListFiles();
-            listBox.Items.Clear();
-            foreach (File file in list)
-                if (file.Name != MyName)
-                    listBox.Items.Add(file.Name);
+        void UpdateList() {
+            Task.Run(() => {
+                while (true) {
+                    list = ListFiles();
+                    Invoke(new MethodInvoker(delegate () {
+                        listBox.Items.Clear();
+                        foreach (File file in list)
+                            if (file.Name != MyName)
+                                listBox.Items.Add(file.Name);
+                    }));
+                    Task.Delay(2000).Wait();
+                }
+            });
         }
 
-        private void CleanList(object sender, EventArgs e) {
-
+        void CleanList() {
+            Task.Run(() => {
+                while (true) {
+                    File[] items = list.Clone() as File[];
+                    Task[] tasks = new Task[items.Length];
+                    for (int i = 0; i < items.Length; i++)
+                        tasks[i] = new Task((object index) => {
+                            if (items[(int)index].Name != MyName) {
+                                File file = ReadFile(items[(int)index]);
+                                if (!Stinto.Ping(file.Content))
+                                    DeleteFile(file);
+                            }
+                        }, i);
+                    foreach (Task task in tasks)
+                        task.Start();
+                    Task.WaitAll(tasks);
+                    Task.Delay(10000).Wait();
+                }
+            });
         }
     }
 }
