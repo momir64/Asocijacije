@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Asocijacije {
     public partial class PozadinaForm : MyForm {
-        public PozadinaForm() {
+        public PozadinaForm(int takmicar1, int takmicar2) {
             InitializeComponent();
+            RandomTakmicari(takmicar1, takmicar2);
         }
 
         readonly Bitmap background = new Bitmap(1280, 720);
@@ -26,7 +26,6 @@ namespace Asocijacije {
                     Left = Owner.Left;
                     Top = Owner.Top;
                 }
-            RandomTakmicari();
             MakeBackground();
             BackgroundImage = background;
         }
@@ -96,20 +95,12 @@ namespace Asocijacije {
 
         bool egg;
         Bitmap levi, desni;
-        private void RandomTakmicari() {
-            using (var generator = RandomNumberGenerator.Create()) {
-                var nums = new byte[8];
-                generator.GetBytes(nums);
-                int takmicar1 = Math.Abs(BitConverter.ToInt32(nums, 0) % 6) + 1;
-                int takmicar2 = Math.Abs(BitConverter.ToInt32(nums, 4) % 6) + 1;
-                egg = takmicar1 == 4;
-                if (levi != null)
-                    levi.Dispose();
-                levi = (Bitmap)Properties.Resources.ResourceManager.GetObject("levi" + takmicar1);
-                if (desni != null)
-                    desni.Dispose();
-                desni = (Bitmap)Properties.Resources.ResourceManager.GetObject("desni" + takmicar2);
-            }
+        private void RandomTakmicari(int takmicar1, int takmicar2) {
+            egg = takmicar1 == 4;
+            if (levi != null) levi.Dispose();
+            levi = (Bitmap)Properties.Resources.ResourceManager.GetObject("levi" + takmicar1);
+            if (desni != null) desni.Dispose();
+            desni = (Bitmap)Properties.Resources.ResourceManager.GetObject("desni" + takmicar2);
         }
 
         private void MakeBackground() {

@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
+using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace Asocijacije {
     class SlagalicaTV {
@@ -61,11 +62,17 @@ namespace Asocijacije {
             return niz;
         }
 
+        static readonly RNGCryptoServiceProvider random = new RNGCryptoServiceProvider();
+        static int Random(int max) {
+            byte[] randomNumber = new byte[4];
+            random.GetBytes(randomNumber);
+            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % max;
+        }
+
         public static string GetRandomDate() {
-            Random gen = new Random();
             DateTime start = new DateTime(2020, 1, 1);
             int range = (DateTime.Today - start).Days - 1;
-            return start.AddDays(gen.Next(range)).ToString("yyyy-MM-dd");
+            return start.AddDays(Random(range)).ToString("yyyy-MM-dd");
         }
 
         private static async Task LogIn() {

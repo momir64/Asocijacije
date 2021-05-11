@@ -2,11 +2,12 @@
 using Network;
 using System.Linq;
 using System.Drawing;
+using System.Threading;
 using static Network.Gist;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 using static Asocijacije.SlagalicaTV;
-using System.Threading;
 
 namespace Asocijacije {
     public partial class DobroVečeForm : MyForm {
@@ -71,10 +72,12 @@ namespace Asocijacije {
             new Thread(async () => {
                 DeleteFile(MyName);
                 string kolega = chat.ReadMessage();
+                int takmicar1 = Convert.ToInt32(chat.ReadMessage());
+                int takmicar2 = Convert.ToInt32(chat.ReadMessage());
                 string datum = ParNepar(true);
                 string[][][] asocijacije = ParseData(await GetData(datum));
                 Invoke(new MethodInvoker(delegate () {
-                    new AsocijacijeForm(asocijacije, chat, prvi).Show(this);
+                    new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
                     Task.Delay(20).Wait();
                     Hide();
                     HideLoader();
@@ -182,11 +185,15 @@ namespace Asocijacije {
                     chat = new Stinto(ReadFile(kolega).Content);
                     if (chat.Connected) {
                         DeleteFile(MyName);
+                        int takmicar1 = Random(1, 7);
+                        int takmicar2 = Random(1, 7);
                         chat.SendMessage(MyName);
+                        chat.SendMessage(takmicar1.ToString());
+                        chat.SendMessage(takmicar2.ToString());
                         string datum = ParNepar(false);
                         string[][][] asocijacije = ParseData(await GetData(datum));
                         Invoke(new MethodInvoker(delegate () {
-                            new AsocijacijeForm(asocijacije, chat, prvi).Show(this);
+                            new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
                             Task.Delay(20).Wait();
                             Hide();
                             HideLoader();
@@ -203,10 +210,22 @@ namespace Asocijacije {
             }
         }
 
+        static readonly RNGCryptoServiceProvider random = new RNGCryptoServiceProvider();
+        static int Random(int max) {
+            byte[] randomNumber = new byte[4];
+            random.GetBytes(randomNumber);
+            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % max;
+        }
+        static int Random(int min, int max) {
+            byte[] randomNumber = new byte[4];
+            random.GetBytes(randomNumber);
+            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % (max - min) + min;
+        }
+
         bool prvi;
         private string ParNepar(bool whoami) {
             string datum;
-            string mojIzbor = new Random().Next(2).ToString();
+            string mojIzbor = Random(2).ToString();
             chat.SendMessage(mojIzbor);
             string tvojIzbor = chat.ReadMessage();
             prvi = (mojIzbor == tvojIzbor) == whoami;
@@ -222,14 +241,16 @@ namespace Asocijacije {
         void UpdateList() {
             Task.Run(() => {
                 while (true) {
-                    list = ListFiles();
-                    Invoke(new MethodInvoker(delegate () {
-                        listBox.Items.Clear();
-                        foreach (File file in list)
-                            if (file.Name != MyName)
-                                listBox.Items.Add(file.Name);
-                    }));
-                    Task.Delay(2000).Wait();
+                    if (Visible) {
+                        list = ListFiles();
+                        Invoke(new MethodInvoker(delegate () {
+                            listBox.Items.Clear();
+                            foreach (File file in list)
+                                if (file.Name != MyName)
+                                    listBox.Items.Add(file.Name);
+                        }));
+                    }
+                    Task.Delay(10000).Wait();
                 }
             });
         }
@@ -237,20 +258,22 @@ namespace Asocijacije {
         void CleanList() {
             Task.Run(() => {
                 while (true) {
-                    File[] items = list.Clone() as File[];
-                    Task[] tasks = new Task[items.Length];
-                    for (int i = 0; i < items.Length; i++)
-                        tasks[i] = new Task((object index) => {
-                            if (items[(int)index].Name != MyName) {
-                                File file = ReadFile(items[(int)index]);
-                                if (!Stinto.Ping(file.Content))
-                                    DeleteFile(file);
-                            }
-                        }, i);
-                    foreach (Task task in tasks)
-                        task.Start();
-                    Task.WaitAll(tasks);
-                    Task.Delay(10000).Wait();
+                    if (Visible) {
+                        File[] items = list.Clone() as File[];
+                        Task[] tasks = new Task[items.Length];
+                        for (int i = 0; i < items.Length; i++)
+                            tasks[i] = new Task((object index) => {
+                                if (items[(int)index].Name != MyName) {
+                                    File file = ReadFile(items[(int)index]);
+                                    if (!Stinto.Ping(file.Content))
+                                        DeleteFile(file);
+                                }
+                            }, i);
+                        foreach (Task task in tasks)
+                            task.Start();
+                        Task.WaitAll(tasks);
+                    }
+                    Task.Delay(25000).Wait();
                 }
             });
         }

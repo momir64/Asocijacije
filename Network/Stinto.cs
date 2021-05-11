@@ -5,6 +5,7 @@ using System.Text;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace Network {
     public class Stinto {
@@ -15,14 +16,19 @@ namespace Network {
         const string yeahimhere = "yeahimhere";
         const string notrightnow = "notrightnow";
 
-        static readonly Random random = new Random();
         const string chars = "abcdefghijklmnopqrstuvwxyz";
         static string EncodeUri(string str) => Uri.EscapeDataString(str);
         static string DecodeUri(string str) => Uri.UnescapeDataString(str);
-        static string RandomString(int length) => new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+        static readonly RNGCryptoServiceProvider random = new RNGCryptoServiceProvider();
+        static string RandomString(int length) => new string(Enumerable.Repeat(chars, length).Select(s => s[Random(s.Length)]).ToArray());
         string GetStringBetween(string str, string a, string b) {
             int start = str.IndexOf(a) + a.Length;
             return str.Substring(start, str.Substring(start).IndexOf(b));
+        }
+        static int Random(int max) {
+            byte[] randomNumber = new byte[4];
+            random.GetBytes(randomNumber);
+            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % max;
         }
 
         void CreateRoom() {

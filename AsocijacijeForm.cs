@@ -3,23 +3,32 @@ using Network;
 using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 
 namespace Asocijacije {
     public partial class AsocijacijeForm : PozadinaForm {
-        bool prvi;
-        Stinto chat;
+        bool naRedu;
+        readonly bool prvi;
+        readonly Stinto chat;
         readonly string[][][] asocijacije;
-        public AsocijacijeForm(string[][][] asocijacije, Stinto chat, bool prvi) {
+        public AsocijacijeForm(string[][][] asocijacije, Stinto chat, bool prvi, int takmicar1, int takmicar2) : base(takmicar1, takmicar2) {
             this.asocijacije = asocijacije;
             this.chat = chat;
             this.prvi = prvi;
-            MessageBox.Show(asocijacije[4][0][0] + " " + prvi, "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            naRedu = prvi;
             InitializeComponent();
+        }
+
+        void UpdateNaRedu() {
+            if (prvi == naRedu)
+                naReduBox.Open((naRedu ? "ВИ СТЕ" : "ПРОТИВНИК ЈЕ") + " НА ПОТЕЗУ", TextBoxRounded.Plava);
+            else
+                naReduBox.Open((naRedu ? "ВИ СТЕ" : "ПРОТИВНИК ЈЕ") + " НА ПОТЕЗУ", TextBoxRounded.Crvena);
         }
 
         bool loaded = false;
         TimerBox timerBox;
-        TextBoxRounded dalje;
+        TextBoxRounded dalje, naReduBox;
         readonly TextBoxRounded[][] kolone = new TextBoxRounded[5][];
         private void AsocijacijeForm_Load(object sender, EventArgs e) {
             PlaceScores();
@@ -40,12 +49,29 @@ namespace Asocijacije {
                     kolone[i][j].Click += new EventHandler(TextBoxClick);
                     Controls.Add(kolone[i][j]);
                 }
+            naReduBox = new TextBoxRounded(440f, -8f, 400f, 50f, (naRedu ? "ВИ СТЕ" : "ПРОТИВНИК ЈЕ") + " НА ПОТЕЗУ", this);
             dalje = new TextBoxRounded(565f, 658f, 150f, 50f, "ДАЉЕ", this);
             kolone[4][0].Click += new EventHandler(TextBoxClick);
+            dalje.MouseDown += new MouseEventHandler(DaljeDown);
+            naReduBox.Click += new EventHandler(TextBoxClick);
+            dalje.MouseUp += new MouseEventHandler(DaljeUp);
             dalje.Click += new EventHandler(TextBoxClick);
             Controls.Add(kolone[4][0]);
+            Controls.Add(naReduBox);
+            timer.Enabled = true;
             Controls.Add(dalje);
+            Tick(sender, e);
+            UpdateNaRedu();
             loaded = true;
+            chat.MessageEvent += OnMessageReceived;
+        }
+
+        void DaljeDown(object sender, MouseEventArgs e) {
+            dalje.Color = TextBoxRounded.NeutralnaDown;
+        }
+
+        void DaljeUp(object sender, MouseEventArgs e) {
+            dalje.Color = TextBoxRounded.Neutralna;
         }
 
         protected override void OnResize(EventArgs e) {
@@ -55,6 +81,7 @@ namespace Asocijacije {
                     for (int j = 0; j < 5; j++)
                         kolone[i][j].UpdateDimensions(this);
                 kolone[4][0].UpdateDimensions(this);
+                naReduBox.UpdateDimensions(this);
                 timerBox.UpdateDimensions(this);
                 dalje.UpdateDimensions(this);
                 PlaceScores();
@@ -76,7 +103,6 @@ namespace Asocijacije {
         }
 
         float sec = 1;
-        bool started = false;
         readonly int maxTime = 120;
         private void Tick(object sender, EventArgs e) {
             if (!finished && sec <= maxTime) {
@@ -102,11 +128,19 @@ namespace Asocijacije {
             return text;
         }
 
+        void OnMessageReceived(string message) {
+
+        }
+
         bool probano = false;
         bool finished = false;
         bool otvaranje = true;
         Color InsideColor = TextBoxRounded.Plava;
         void OnResult(TextBoxRounded textBox, bool addScore = true) {
+            chat.SendMessage("result:" + textBox.K + ":" + textBox.Text);
+            textBox.Color = TextBoxRounded.NeutralnaDown;
+            Task.Delay(1000).Wait();
+            textBox.Color = TextBoxRounded.Neutralna;
             probano = true;
             otvaranje = true;
             foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
@@ -140,34 +174,31 @@ namespace Asocijacije {
         TextBoxRounded textBoxOld;
         bool probajKonacno = false;
         void TextBoxClick(object sender, EventArgs e) {
-            TextBoxRounded textBox = (TextBoxRounded)sender;
-            if (!started) {
-                started = true;
-                timer.Enabled = true;
-                Tick(sender, e);
+            if (naRedu) {
+                TextBoxRounded textBox = (TextBoxRounded)sender;
+                if (!finished && otvaranje && textBox.B < 4 && !textBox.Opened) {
+                    RestoreTitles();
+                    chat.SendMessage("open:" + textBox.K + ":" + textBox.B + ":" + asocijacije[textBox.K][textBox.B][0]);
+                    otvaranje = false;
+                    textBox.Text = asocijacije[textBox.K][textBox.B][0];
+                    textBox.Opened = true;
+                }
+                else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4) || SveOtvoreno()) && textBox.B == 4 && (probano || DifferentTextBox(textBox)) && !textBox.Opened && (OtvorenaKolona(textBox.K) || textBox.B == 4)) {
+                    RestoreTitles();
+                    probano = false;
+                    backClick = false;
+                    textBox.Enabled = true;
+                    textBox.ResetText();
+                }
+                else if (!finished && !otvaranje && textBox.B == 5) {
+                    RestoreTitles();
+                    chat.SendMessage("next");
+                    otvaranje = true;
+                }
+                else if (!finished && DifferentTextBox(textBox))
+                    RestoreTitles();
+                textBoxOld = textBox;
             }
-
-            if (!finished && otvaranje && textBox.B < 4 && !textBox.Opened) {
-                RestoreTitles();
-                otvaranje = false;
-                textBox.Text = asocijacije[textBox.K][textBox.B][0];
-                textBox.Opened = true;
-            }
-            else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4) || SveOtvoreno()) && textBox.B == 4 && (probano || DifferentTextBox(textBox)) && !textBox.Opened && (OtvorenaKolona(textBox.K) || textBox.B == 4)) {
-                RestoreTitles();
-                probano = false;
-                backClick = false;
-                textBox.Enabled = true;
-                textBox.ResetText();
-            }
-            else if (!finished && !otvaranje && textBox.B == 5) {
-                RestoreTitles();
-                otvaranje = true;
-            }
-            else if (!finished && DifferentTextBox(textBox))
-                RestoreTitles();
-
-            textBoxOld = textBox;
         }
 
         bool SveOtvoreno() {

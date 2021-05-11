@@ -16,6 +16,8 @@ namespace Asocijacije {
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing) {
             label.Click -= new EventHandler(OnClick);
+            label.MouseDown -= new MouseEventHandler(this.OnMouseDown);
+            label.MouseUp -= new MouseEventHandler(this.OnMouseUp);
             if (disposing && (components != null)) {
                 components.Dispose();
             }
@@ -45,6 +47,8 @@ namespace Asocijacije {
             this.label.Text = "ПРОБА";
             this.label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.label.Click += new System.EventHandler(this.OnClick);
+            this.label.MouseDown += new MouseEventHandler(this.OnMouseDown);
+            this.label.MouseUp += new MouseEventHandler(this.OnMouseUp);
             this.label.TextChanged += new System.EventHandler(this.Label_TextChanged);
             // 
             // textBox

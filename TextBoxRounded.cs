@@ -9,8 +9,9 @@ namespace Asocijacije {
         [DllImport("gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nheightRect, int nweightRect);
         readonly public static Color Plava = Color.FromArgb(32, 160, 254);
-        readonly public static Color Crvena = Color.FromArgb(205, 0, 1);
+        readonly public static Color Crvena = Color.FromArgb(253, 44, 34);
         readonly public static Color Neutralna = Color.FromArgb(0, 32, 105);
+        readonly public static Color NeutralnaDown = Color.FromArgb(0, 70, 150);
 
         public int K;
         public int B;
@@ -76,6 +77,14 @@ namespace Asocijacije {
             label.Text = str;
         }
 
+        public Color Color {
+            set {
+                InsideColor = value;
+                MakeBackground();
+                Invalidate();
+            }
+        }
+
         public event ResultEventHandler ResultEvent;
         public delegate void ResultEventHandler(TextBoxRounded textBox, bool addScore = true);
         private void TextBox_KeyPress(object sender, KeyPressEventArgs e) {
@@ -134,6 +143,8 @@ namespace Asocijacije {
         }
 
         private void OnClick(object sender, EventArgs e) => base.OnClick(e);
+        private void OnMouseDown(object sender, MouseEventArgs e) => base.OnMouseDown(e);
+        private void OnMouseUp(object sender, MouseEventArgs e) => base.OnMouseUp(e);
         public override string Text {
             set => label.Text = value;
             get => label.Text;

@@ -1,8 +1,10 @@
-﻿using System.Web;
+﻿using System;
+using System.Web;
 using System.Linq;
 using System.Text;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace Network {
     public static class Gist {
@@ -22,17 +24,24 @@ namespace Network {
                     request.Headers.Add("User-Agent", "gist-dispecer");
                     request.Headers.Add("Authorization", "token " + token);
                     HttpResponseMessage response = httpClient.SendAsync(request).Result;
-                    JArray result = JArray.Parse(response.Content.ReadAsStringAsync().Result);
-                    File[] files = new File[result.Count];
-                    for (int i = 0; i < files.Length; i++) {
+                    JArray result;
+                    try {
+                        result = JArray.Parse(response.Content.ReadAsStringAsync().Result);
+                    }
+                    catch (Exception) {
+                        Environment.Exit(Environment.ExitCode);
+                        return null;
+                    }
+                    List<File> files = new List<File>();
+                    for (int i = 0; i < result.Count; i++) {
                         if (result[i]["files"].First == null)
                             continue;
-                        files[i] = new File {
+                        files.Add(new File {
                             Id = result[i]["id"].ToString(),
                             Name = (result[i]["files"].First as JProperty).Name
-                        };
+                        });
                     }
-                    return files;
+                    return files.ToArray();
                 }
             }
         }
