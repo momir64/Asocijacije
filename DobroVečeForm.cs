@@ -196,8 +196,8 @@ namespace Asocijacije {
         private async Task ConnectedClientAsync(bool successful) {
             if (successful) {
                 await DeleteFileAsync(kolega);
-                int takmicar1 = Random(1, 7);
-                int takmicar2 = Random(1, 7);
+                int takmicar1 = random.Next(1, 7);
+                int takmicar2 = random.Next(1, 7);
                 await chat.SendMessageAsync(MyName);
                 await chat.SendMessageAsync(takmicar1.ToString());
                 await chat.SendMessageAsync(takmicar2.ToString());
@@ -216,22 +216,11 @@ namespace Asocijacije {
             }
         }
 
-        static readonly RNGCryptoServiceProvider random = new RNGCryptoServiceProvider();
-        static int Random(int max) {
-            byte[] randomNumber = new byte[4];
-            random.GetBytes(randomNumber);
-            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % max;
-        }
-        static int Random(int min, int max) {
-            byte[] randomNumber = new byte[4];
-            random.GetBytes(randomNumber);
-            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % (max - min) + min;
-        }
-
         bool prvi;
+        readonly Random random = new Random();
         private async Task<string> ParNeparAsync(bool whoami) {
             string datum;
-            string mojIzbor = Random(2).ToString();
+            string mojIzbor = random.Next(2).ToString();
             await chat.SendMessageAsync(mojIzbor);
             string tvojIzbor = await chat.ReadMessageAsync();
             prvi = (mojIzbor == tvojIzbor) == whoami;
@@ -271,7 +260,7 @@ namespace Asocijacije {
                         Task[] tasks = new Task[items.Length];
                         for (int i = 0; i < items.Length; i++)
                             tasks[i] = new Task(async (object index) => {
-                                if (items[(int)index].Name != MyName) {
+                                if (items[(int)index].Name != MyName && items[(int)index].Name != kolega) {
                                     File file = await ReadFileAsync(items[(int)index]);
                                     if (file != null && !await Stinto.PingAsync(file.Content))
                                         await DeleteFileAsync(file);

@@ -50,17 +50,11 @@ namespace Asocijacije {
             return niz;
         }
 
-        static readonly RNGCryptoServiceProvider random = new RNGCryptoServiceProvider();
-        static int Random(int max) {
-            byte[] randomNumber = new byte[4];
-            random.GetBytes(randomNumber);
-            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % max;
-        }
-
+        static readonly Random random = new Random();
         public static string GetRandomDate() {
             DateTime start = new DateTime(2020, 1, 1);
             int range = (DateTime.Today - start).Days - 1;
-            return start.AddDays(Random(range)).ToString("yyyy-MM-dd");
+            return start.AddDays(random.Next(range)).ToString("yyyy-MM-dd");
         }
 
         public static async Task<string> GetData(string date) {

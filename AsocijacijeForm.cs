@@ -62,7 +62,8 @@ namespace Asocijacije {
             Tick(sender, e);
             UpdateNaRedu();
             loaded = true;
-            chat.MessageEvent += OnMessageReceived;
+            if (!naRedu)
+                _ = ReceiveMessageAsync();
         }
 
         void DaljeDown(object sender, MouseEventArgs e) {
@@ -123,10 +124,11 @@ namespace Asocijacije {
             return text;
         }
 
-        void OnMessageReceived(string message) {
+        async Task ReceiveMessageAsync() {
+            string message = await chat.ReadMessageAsync();
             if (message == "next") {
                 dalje.Color = TextBoxRounded.NeutralnaDown;
-                Task.Delay(500).Wait();
+                await Task.Delay(500);
                 dalje.Color = TextBoxRounded.Neutralna;
                 otvaranje = true;
                 naRedu = true;
@@ -139,14 +141,13 @@ namespace Asocijacije {
                 int B = Convert.ToInt32(parts[2]);
                 kolone[K][4 - B].Text = asocijacije[K][B][0];
                 kolone[K][4 - B].Opened = true;
+                await ReceiveMessageAsync();
             }
             else if (parts[0] == "result") {
                 RestoreTitles();
                 kolone[Convert.ToInt32(parts[1])][0].Text = parts[2];
                 OnResult(kolone[Convert.ToInt32(parts[1])][0]);
                 otvaranje = true;
-                naRedu = true;
-                UpdateNaRedu();
             }
         }
 
@@ -154,8 +155,9 @@ namespace Asocijacije {
         bool finished = false;
         bool otvaranje = true;
         async void OnResult(TextBoxRounded textBox, bool addScore = true) {
-            if (naRedu) await chat.SendMessageAsync("result:" + textBox.K + ":" + textBox.Text);
-            Task.Delay(750).Wait();
+            if (naRedu)
+                await chat.SendMessageAsync("result:" + textBox.K + ":" + textBox.Text);
+            await Task.Delay(750);
             probano = true;
             otvaranje = true;
             foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
@@ -184,7 +186,13 @@ namespace Asocijacije {
                 }
             }
             RestoreTitles();
-            naRedu = false;
+            if (naRedu) {
+                naRedu = false;
+                UpdateNaRedu();
+                await ReceiveMessageAsync();
+            }
+            else
+                naRedu = true;
         }
 
         TextBoxRounded textBoxOld;
@@ -213,6 +221,8 @@ namespace Asocijacije {
                     naRedu = false;
                     Task.Delay(500).Wait();
                     dalje.Color = TextBoxRounded.Neutralna;
+                    UpdateNaRedu();
+                    await ReceiveMessageAsync();
                 }
                 else if (!finished && DifferentTextBox(textBox))
                     RestoreTitles();

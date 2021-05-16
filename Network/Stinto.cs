@@ -14,19 +14,14 @@ namespace Network {
         const string areyoufree = "areyoufree";
         const string yeahimhere = "yeahimhere";
 
+        static readonly Random random = new Random();
         const string chars = "abcdefghijklmnopqrstuvwxyz";
         static string EncodeUri(string str) => Uri.EscapeDataString(str);
         static string DecodeUri(string str) => Uri.UnescapeDataString(str);
-        static readonly RNGCryptoServiceProvider random = new RNGCryptoServiceProvider();
-        static string RandomString(int length) => new string(Enumerable.Repeat(chars, length).Select(s => s[Random(s.Length)]).ToArray());
+        static string RandomString(int length) => new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
         string GetStringBetween(string str, string a, string b) {
             int start = str.IndexOf(a) + a.Length;
             return str.Substring(start, str.Substring(start).IndexOf(b));
-        }
-        static int Random(int max) {
-            byte[] randomNumber = new byte[4];
-            random.GetBytes(randomNumber);
-            return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % max;
         }
 
         async Task CreateRoomAsync(Func<string, Task> RoomCreated) {
@@ -85,7 +80,6 @@ namespace Network {
             if (await Task.WhenAny(task, Task.Delay(waitTime, cancellationToken.Token)) == task) {
                 await task;
                 Connected = true;
-                MessageReader();
                 OnConnect?.Invoke(true);
             }
             else {
@@ -106,48 +100,6 @@ namespace Network {
         public delegate Task DisconnectEventHandler();
         public event DisconnectEventHandler OnDisconnect;
         public delegate Task ConnectEventHandler(bool successful);
-        public event MessageEventHandler MessageEvent {
-            add {
-                MessageEventPrivate += value;
-                SignalMessageEventWait.Set();
-            }
-            remove { MessageEventPrivate -= value; }
-        }
-        event MessageEventHandler MessageEventPrivate;
-        public delegate void MessageEventHandler(string message);
-        readonly ManualResetEvent SignalMessageEventWait = new ManualResetEvent(false);
-        void MessageReader() {
-            new Thread(async () => {
-                while (Connected) {
-                    if (MessageEventPrivate == null) {
-                        SignalMessageEventWait.WaitOne();
-                        SignalMessageEventWait.Reset();
-                    }
-                    string result;
-                    try {
-                        result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync(cancellationTokenSource.Token));
-                    }
-                    catch (FlurlHttpException ex) when (ex.InnerException is TaskCanceledException) {
-                        return;
-                    }
-                    if (result.Length == 0) continue;
-                    foreach (string line in result.Trim().Split('\n')) {
-                        index++;
-                        string[] words = line.Split('\t');
-                        if (words[2] != me && words[3] == "t") {
-                            string[] message = words[4].Split(delimeter);
-                            if (message[0] == "public")
-                                MessageEventPrivate?.Invoke(DecodeUri(message[1]));
-                        }
-                        else if (words[2] == kolega && words[3] == "x") {
-                            Connected = false;
-                            OnDisconnect?.Invoke();
-                            return;
-                        }
-                    }
-                }
-            }) { IsBackground = true }.Start();
-        }
 
         public async Task<string> ReadMessageAsync() {
             while (true) {
@@ -194,7 +146,6 @@ namespace Network {
                                 if (message[1] == talktome) {
                                     kolega = message[2];
                                     Connected = true;
-                                    MessageReader();
                                     OnConnect?.Invoke(true);
                                     break;
                                 }
