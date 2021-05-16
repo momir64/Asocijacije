@@ -54,7 +54,6 @@ namespace Asocijacije {
             kolone[4][0].Click += new EventHandler(TextBoxClick);
             dalje.MouseDown += new MouseEventHandler(DaljeDown);
             naReduBox.Click += new EventHandler(TextBoxClick);
-            dalje.MouseUp += new MouseEventHandler(DaljeUp);
             dalje.Click += new EventHandler(TextBoxClick);
             Controls.Add(kolone[4][0]);
             Controls.Add(naReduBox);
@@ -67,11 +66,8 @@ namespace Asocijacije {
         }
 
         void DaljeDown(object sender, MouseEventArgs e) {
-            dalje.Color = TextBoxRounded.NeutralnaDown;
-        }
-
-        void DaljeUp(object sender, MouseEventArgs e) {
-            dalje.Color = TextBoxRounded.Neutralna;
+            if (naRedu && !finished && !otvaranje)
+                dalje.Color = TextBoxRounded.NeutralnaDown;
         }
 
         protected override void OnResize(EventArgs e) {
@@ -103,7 +99,7 @@ namespace Asocijacije {
         }
 
         float sec = 1;
-        readonly int maxTime = 120;
+        readonly int maxTime = 12000;
         private void Tick(object sender, EventArgs e) {
             if (!finished && sec <= maxTime) {
                 timerBox.SetPercentage(sec / maxTime);
@@ -114,7 +110,6 @@ namespace Asocijacije {
                 finished = true;
                 RestoreTitles();
                 kolone[4][0].Text = asocijacije[4][0][0];
-                InsideColor = TextBoxRounded.Neutralna;
                 OnResult(kolone[4][0], false);
             }
         }
@@ -129,18 +124,38 @@ namespace Asocijacije {
         }
 
         void OnMessageReceived(string message) {
-
+            if (message == "next") {
+                dalje.Color = TextBoxRounded.NeutralnaDown;
+                Task.Delay(500).Wait();
+                dalje.Color = TextBoxRounded.Neutralna;
+                otvaranje = true;
+                naRedu = true;
+                UpdateNaRedu();
+                return;
+            }
+            string[] parts = message.Split(':');
+            if (parts[0] == "open") {
+                int K = Convert.ToInt32(parts[1]);
+                int B = Convert.ToInt32(parts[2]);
+                kolone[K][4 - B].Text = asocijacije[K][B][0];
+                kolone[K][4 - B].Opened = true;
+            }
+            else if (parts[0] == "result") {
+                RestoreTitles();
+                kolone[Convert.ToInt32(parts[1])][0].Text = parts[2];
+                OnResult(kolone[Convert.ToInt32(parts[1])][0]);
+                otvaranje = true;
+                naRedu = true;
+                UpdateNaRedu();
+            }
         }
 
         bool probano = false;
         bool finished = false;
         bool otvaranje = true;
-        Color InsideColor = TextBoxRounded.Plava;
-        void OnResult(TextBoxRounded textBox, bool addScore = true) {
-            chat.SendMessage("result:" + textBox.K + ":" + textBox.Text);
-            textBox.Color = TextBoxRounded.NeutralnaDown;
-            Task.Delay(1000).Wait();
-            textBox.Color = TextBoxRounded.Neutralna;
+        async void OnResult(TextBoxRounded textBox, bool addScore = true) {
+            if (naRedu) await chat.SendMessageAsync("result:" + textBox.K + ":" + textBox.Text);
+            Task.Delay(750).Wait();
             probano = true;
             otvaranje = true;
             foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
@@ -154,11 +169,11 @@ namespace Asocijacije {
                             if (j < 4 && !kolone[i][4 - j].Opened)
                                 score++;
                             if (!kolone[i][0].Opened)
-                                kolone[i][4 - j].Open(asocijacije[i][j][0], InsideColor);
+                                kolone[i][4 - j].Open(asocijacije[i][j][0], prvi == naRedu ? TextBoxRounded.Plava : TextBoxRounded.Crvena);
                         }
                     }
                     if (textBox.K == 4) {
-                        kolone[4][0].Open(asocijacije[4][0][0], InsideColor);
+                        kolone[4][0].Open(asocijacije[4][0][0], prvi == naRedu ? TextBoxRounded.Plava : TextBoxRounded.Crvena);
                         finished = true;
                         score += 7;
                     }
@@ -169,16 +184,17 @@ namespace Asocijacije {
                 }
             }
             RestoreTitles();
+            naRedu = false;
         }
 
         TextBoxRounded textBoxOld;
         bool probajKonacno = false;
-        void TextBoxClick(object sender, EventArgs e) {
+        async void TextBoxClick(object sender, EventArgs e) {
             if (naRedu) {
                 TextBoxRounded textBox = (TextBoxRounded)sender;
                 if (!finished && otvaranje && textBox.B < 4 && !textBox.Opened) {
                     RestoreTitles();
-                    chat.SendMessage("open:" + textBox.K + ":" + textBox.B + ":" + asocijacije[textBox.K][textBox.B][0]);
+                    await chat.SendMessageAsync("open:" + textBox.K + ":" + textBox.B);
                     otvaranje = false;
                     textBox.Text = asocijacije[textBox.K][textBox.B][0];
                     textBox.Opened = true;
@@ -192,8 +208,11 @@ namespace Asocijacije {
                 }
                 else if (!finished && !otvaranje && textBox.B == 5) {
                     RestoreTitles();
-                    chat.SendMessage("next");
+                    await chat.SendMessageAsync("next");
                     otvaranje = true;
+                    naRedu = false;
+                    Task.Delay(500).Wait();
+                    dalje.Color = TextBoxRounded.Neutralna;
                 }
                 else if (!finished && DifferentTextBox(textBox))
                     RestoreTitles();

@@ -1,8 +1,7 @@
-﻿using System;
-using System.Net;
+﻿using Flurl;
+using System;
+using Flurl.Http;
 using System.Linq;
-using System.Text;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
@@ -14,7 +13,6 @@ namespace Network {
         const string talktome = "talktome";
         const string areyoufree = "areyoufree";
         const string yeahimhere = "yeahimhere";
-        const string notrightnow = "notrightnow";
 
         const string chars = "abcdefghijklmnopqrstuvwxyz";
         static string EncodeUri(string str) => Uri.EscapeDataString(str);
@@ -31,278 +29,276 @@ namespace Network {
             return Math.Abs(BitConverter.ToInt32(randomNumber, 0)) % max;
         }
 
-        void CreateRoom() {
-            using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/+")) {
-                uri = client.SendAsync(request).Result.RequestMessage.RequestUri;
-            }
-            using (var request = new HttpRequestMessage(new HttpMethod("GET"), uri)) {
-                HttpResponseMessage response = client.SendAsync(request).Result;
-                Room = GetStringBetween(response.Content.ReadAsStringAsync().Result, "data-chat-id=\"", "\"");
-            }
+        async Task CreateRoomAsync(Func<string, Task> RoomCreated) {
+            uri = (await new Url("https://stin.to/+").GetAsync()).ResponseMessage.RequestMessage.RequestUri;
+            string room = GetStringBetween(await uri.GetStringAsync(), "data-chat-id=\"", "\"");
+            await RoomCreated(room);
+            StintoUrl += room + "/";
         }
 
-        void LogIn2Room() {
+        async Task LogIn2RoomAsync() {
             while (true) {
                 me = RandomString(6);
-                using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + Room + "/login")) {
-                    request.Content = new StringContent("nick=" + me + "&termsOfUse=true", Encoding.UTF8, "application/x-www-form-urlencoded");
-                    if (client.SendAsync(request).Result.IsSuccessStatusCode) break;
+                IFlurlResponse response;
+                try {
+                    response = await StintoUrl.AppendPathSegment("login").WithTimeout(999).PostUrlEncodedAsync(new { nick = me, termsOfUse = "true" });
+                    if (response.ResponseMessage.IsSuccessStatusCode) {
+                        cookies.AddOrReplace(response.Cookies[1]);
+                        break;
+                    }
+                }
+                catch (FlurlHttpException ex) when (ex.StatusCode == 429) {
+                    await Task.Delay(500);
+                    continue;
                 }
             }
-            using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=-2")) {
-                HttpResponseMessage response = client.SendAsync(request).Result;
-                string result = response.Content.ReadAsStringAsync().Result;
-                string[] lines = result.Substring(0, result.IndexOf("\n0")).Split('\n');
-                lines = lines.Take(lines.Length - 1).Where(line => line.Split('\t')[6] == me && line.Split('\t')[8] == "false").ToArray();
-                me = lines[0].Split('\t')[4];
-            }
+            string result = await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", -2).WithCookies(cookies).GetStringAsync();
+            string[] lines = result.Substring(0, result.IndexOf("\n0")).Split('\n');
+            lines = lines.Take(lines.Length - 1).Where(line => line.Split('\t')[6] == me && line.Split('\t')[8] == "false").ToArray();
+            me = lines[0].Split('\t')[4];
         }
 
-        void GetLastIndex() {
-            using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=0")) {
-                HttpResponseMessage response = client.SendAsync(request).Result;
-                string result = response.Content.ReadAsStringAsync().Result.Trim();
-                index = Convert.ToInt32(result.Split('\n').Last().Split('\t')[0], 16);
-            }
+        async Task GetLastIndexAsync() {
+            string result = DecodeUri((await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", 0).WithCookies(cookies).GetStringAsync()).Trim());
+            index = Convert.ToInt32(result.Split('\n').Last().Split('\t')[0], 16);
         }
 
-        async Task WaitResponse() {
-            GetLastIndex();
-            while (true) {
-                using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
-                    HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
-                    string result = DecodeUri(await response.Content.ReadAsStringAsync());
-                    foreach (string line in result.Trim().Split('\n')) {
-                        index++;
-                        string[] words = line.Split('\t');
-                        if (words[3] == "t") {
-                            string[] message = words[4].Split(delimeter);
-                            if (message[0] == "private" && message[2] == me) {
-                                if (message[1] == yeahimhere) {
-                                    kolega = words[2];
-                                    return;
-                                }
-                                else if (message[1] == notrightnow) {
-                                    kolega = null;
-                                    return;
-                                }
-                            }
-                        }
+        async Task WaitResponseAsync(CancellationToken cancelToken) {
+            await GetLastIndexAsync();
+            while (!cancelToken.IsCancellationRequested) {
+                string result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync());
+                foreach (string line in result.Trim().Split('\n')) {
+                    index++;
+                    string[] words = line.Split('\t');
+                    if (words[3] == "t" && words[4] == "private" + delimeter + yeahimhere + delimeter + me) {
+                        kolega = words[2];
+                        return;
                     }
                 }
             }
         }
 
-        bool Connect() {
-            using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + Room + "/post")) {
-                request.Content = new StringContent("type=TXT&text=private" + delimeter + talktome + delimeter + me, Encoding.UTF8, "application/x-www-form-urlencoded");
-                client.SendAsync(request).Wait();
+        async Task ConnectAsync() {
+            await StintoUrl.AppendPathSegment("post").WithCookies(cookies).PostUrlEncodedAsync(new { type = "TXT", text = "private" + delimeter + talktome + delimeter + me });
+            var cancellationToken = new CancellationTokenSource();
+            var task = WaitResponseAsync(cancellationToken.Token);
+            if (await Task.WhenAny(task, Task.Delay(waitTime, cancellationToken.Token)) == task) {
+                await task;
+                Connected = true;
+                MessageReader();
+                OnConnect?.Invoke(true);
             }
-            return WaitResponse().Wait(waitTime) && kolega != null;
-        }
-
-        public void SendMessage(string message) {
-            using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + Room + "/post")) {
-                request.Content = new StringContent("type=TXT&text=public" + delimeter + EncodeUri(message), Encoding.UTF8, "application/x-www-form-urlencoded");
-                client.SendAsync(request).Wait();
-            }
-        }
-
-        void SendPrivateMessage(string message) {
-            using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + Room + "/post")) {
-                request.Content = new StringContent("type=TXT&text=private" + delimeter + EncodeUri(message), Encoding.UTF8, "application/x-www-form-urlencoded");
-                client.SendAsync(request).Wait();
+            else {
+                cancellationToken.Cancel();
+                OnConnect?.Invoke(false);
             }
         }
 
-        string message;
-        bool waitMessage = false;
+        public async Task SendMessageAsync(string message) {
+            await StintoUrl.AppendPathSegment("post").WithCookies(cookies).PostUrlEncodedAsync(new { type = "TXT", text = "public" + delimeter + EncodeUri(message) });
+        }
+
+        async Task SendPrivateMessageAsync(string message) {
+            await StintoUrl.AppendPathSegment("post").WithCookies(cookies).PostUrlEncodedAsync(new { type = "TXT", text = "private" + delimeter + message });
+        }
+
         public event ConnectEventHandler OnConnect;
-        public delegate void ConnectEventHandler();
-        public event MessageEventHandler MessageEvent;
+        public delegate Task DisconnectEventHandler();
+        public event DisconnectEventHandler OnDisconnect;
+        public delegate Task ConnectEventHandler(bool successful);
+        public event MessageEventHandler MessageEvent {
+            add {
+                MessageEventPrivate += value;
+                SignalMessageEventWait.Set();
+            }
+            remove { MessageEventPrivate -= value; }
+        }
+        event MessageEventHandler MessageEventPrivate;
         public delegate void MessageEventHandler(string message);
-        readonly ManualResetEvent SignalConnectEvent = new ManualResetEvent(false);
-        readonly ManualResetEvent SignalMessageEvent = new ManualResetEvent(false);
-        readonly ManualResetEvent SignalMessageEventBack = new ManualResetEvent(false);
         readonly ManualResetEvent SignalMessageEventWait = new ManualResetEvent(false);
         void MessageReader() {
-            Task.Run(() => {
-                while (true) {
-                    if (MessageEvent == null && !waitMessage) {
+            new Thread(async () => {
+                while (Connected) {
+                    if (MessageEventPrivate == null) {
                         SignalMessageEventWait.WaitOne();
                         SignalMessageEventWait.Reset();
                     }
-                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
-                        HttpResponseMessage response = client.SendAsync(request).Result;
-                        string result = DecodeUri(response.Content.ReadAsStringAsync().Result);
-                        if (MessageEvent == null)
-                            result = result.Trim().Split('\n')[0];
-                        if (result.Length == 0)
-                            continue;
-                        foreach (string line in result.Trim().Split('\n')) {
-                            index++;
-                            string[] words = line.Split('\t');
-                            if (words[2] != me) {
-                                if (words[3] == "t") {
-                                    string[] message = words[4].Split(delimeter);
-                                    if (message[0] == "public") {
-                                        MessageEvent?.Invoke(message[1]);
-                                        if (waitMessage) {
-                                            this.message = message[1];
-                                            SignalMessageEvent.Set();
-                                            SignalMessageEventBack.WaitOne();
-                                            SignalMessageEventBack.Reset();
-                                        }
-                                    }
-                                }
-                                else if (words[3] == "x" && words[2] == kolega) {
-                                    SignalConnectEvent.Reset();
-                                    Connected = false;
-                                    while (!Connected)
-                                        Connected = Connect();
-                                }
-                            }
-                        }
+                    string result;
+                    try {
+                        result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync(cancellationTokenSource.Token));
                     }
-                }
-            });
-        }
-
-        void ConnectManager() {
-            Task.Run(() => {
-                int index = 0;
-                while (true) {
-                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + Room + "/poll?seq=" + index)) {
-                        HttpResponseMessage response = client.SendAsync(request).Result;
-                        string result = DecodeUri(response.Content.ReadAsStringAsync().Result);
-                        if (result.Length == 0)
-                            continue;
-                        foreach (string line in result.Trim().Split('\n')) {
-                            index++;
-                            string[] words = line.Split('\t');
-                            if (words[2] != me && words[3] == "t") {
-                                string[] message = words[4].Split(delimeter);
-                                if (message[0] == "private" && (message[1] == talktome || message[1] == areyoufree)) {
-                                    if (Connected)
-                                        SendPrivateMessage(notrightnow + delimeter + message[2]);
-                                    else {
-                                        SendPrivateMessage(yeahimhere + delimeter + message[2]);
-                                        if (message[1] == talktome) {
-                                            kolega = message[2];
-                                            Connected = true;
-                                            Task.Run(() => { OnConnect?.Invoke(); });
-                                            SignalConnectEvent.Set();
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    catch (FlurlHttpException ex) when (ex.InnerException is TaskCanceledException) {
+                        return;
                     }
-                }
-            });
-        }
-
-        public string ReadMessage() {
-            SignalMessageEventWait.Set();
-            waitMessage = true;
-            SignalMessageEvent.WaitOne();
-            SignalMessageEvent.Reset();
-            string message = this.message;
-            waitMessage = false;
-            SignalMessageEventBack.Set();
-            return message;
-        }
-
-        public void Wait4Connect() {
-            if (Connected) return;
-            SignalConnectEvent.WaitOne();
-        }
-
-        Uri uri;
-        int index;
-        string me, kolega;
-        readonly HttpClient client;
-        readonly CookieContainer cookies;
-        readonly HttpClientHandler handler;
-        public string Room { get; private set; }
-        public bool Connected { get; private set; }
-
-        public Stinto() {
-            cookies = new CookieContainer();
-            handler = new HttpClientHandler { CookieContainer = cookies };
-            client = new HttpClient(handler);
-            CreateRoom();
-            LogIn2Room();
-            ConnectManager();
-            MessageReader();
-        }
-
-        public Stinto(string room) {
-            Room = room;
-            cookies = new CookieContainer();
-            handler = new HttpClientHandler { CookieContainer = cookies };
-            client = new HttpClient(handler);
-            LogIn2Room();
-            Connected = Connect();
-            if (Connected)
-                MessageReader();
-        }
-
-        static async Task<bool> WaitPing(HttpClient client, string room, string me, int index) {
-            while (true) {
-                using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + room + "/poll?seq=" + index)) {
-                    HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
-                    string result = DecodeUri(await response.Content.ReadAsStringAsync());
+                    if (result.Length == 0) continue;
                     foreach (string line in result.Trim().Split('\n')) {
                         index++;
                         string[] words = line.Split('\t');
-                        if (words[3] == "t") {
+                        if (words[2] != me && words[3] == "t") {
                             string[] message = words[4].Split(delimeter);
-                            if (message[0] == "private" && message[2] == me) {
-                                if (message[1] == yeahimhere)
-                                    return true;
-                                else if (message[1] == notrightnow)
-                                    return false;
-                            }
+                            if (message[0] == "public")
+                                MessageEventPrivate?.Invoke(DecodeUri(message[1]));
                         }
+                        else if (words[2] == kolega && words[3] == "x") {
+                            Connected = false;
+                            OnDisconnect?.Invoke();
+                            return;
+                        }
+                    }
+                }
+            }) { IsBackground = true }.Start();
+        }
+
+        public async Task<string> ReadMessageAsync() {
+            while (true) {
+                string result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync());
+                if (result.Length == 0) continue;
+                foreach (string line in result.Trim().Split('\n')) {
+                    index++;
+                    string[] words = line.Split('\t');
+                    if (words[2] != me && words[3] == "t") {
+                        string[] message = words[4].Split(delimeter);
+                        if (message[0] == "public")
+                            return DecodeUri(message[1]);
+                    }
+                    else if (words[2] == kolega && words[3] == "x") {
+                        Connected = false;
+                        OnDisconnect?.Invoke();
+                        return "";
                     }
                 }
             }
         }
 
-        public static bool Ping(string room) {
-            int index;
-            string me;
-            CookieContainer cookies = new CookieContainer();
-            using (HttpClientHandler handler = new HttpClientHandler { CookieContainer = cookies }) {
-                using (HttpClient client = new HttpClient(handler)) {
-                    while (true) {
-                        me = RandomString(6);
-                        using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + room + "/login")) {
-                            request.Content = new StringContent("nick=" + me + "&termsOfUse=true", Encoding.UTF8, "application/x-www-form-urlencoded");
-                            if (client.SendAsync(request).Result.IsSuccessStatusCode) break;
+        void ConnectManager() {
+            new Thread(async () => {
+                while (!Connected) {
+                    string result = "";
+                    try {
+                        result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync(cancellationTokenSource.Token));
+                    }
+                    catch (FlurlHttpException ex) when (ex.InnerException is TaskCanceledException) {
+                        return;
+                    }
+                    if (cancellationTokenSource.IsCancellationRequested)
+                        return;
+                    if (result.Length == 0)
+                        continue;
+                    foreach (string line in result.Trim().Split('\n')) {
+                        index++;
+                        string[] words = line.Split('\t');
+                        if (words[2] != me && words[3] == "t") {
+                            string[] message = words[4].Split(delimeter);
+                            if (message[0] == "private" && (message[1] == talktome || message[1] == areyoufree)) {
+                                await SendPrivateMessageAsync(yeahimhere + delimeter + message[2]);
+                                if (message[1] == talktome) {
+                                    kolega = message[2];
+                                    Connected = true;
+                                    MessageReader();
+                                    OnConnect?.Invoke(true);
+                                    break;
+                                }
+                            }
                         }
                     }
-                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + room + "/poll?seq=-2")) {
-                        HttpResponseMessage response = client.SendAsync(request).Result;
-                        string result = response.Content.ReadAsStringAsync().Result;
-                        string[] lines = result.Substring(0, result.IndexOf("\n0")).Split('\n');
-                        lines = lines.Take(lines.Length - 1).Where(line => line.Split('\t')[6] == me && line.Split('\t')[8] == "false").ToArray();
-                        me = lines[0].Split('\t')[4];
-                    }
-                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), "https://stin.to/api/chat/" + room + "/poll?seq=0")) {
-                        HttpResponseMessage response = client.SendAsync(request).Result;
-                        string result = response.Content.ReadAsStringAsync().Result.Trim();
-                        index = Convert.ToInt32(result.Split('\n').Last().Split('\t')[0], 16);
-                    }
-                    using (var request = new HttpRequestMessage(new HttpMethod("POST"), "https://stin.to/api/chat/" + room + "/post")) {
-                        request.Content = new StringContent("type=TXT&text=private" + delimeter + areyoufree + delimeter + me, Encoding.UTF8, "application/x-www-form-urlencoded");
-                        client.SendAsync(request).Wait();
-                    }
-                    Task<bool> task = WaitPing(client, room, me, index);
-                    return task.Wait(waitTime) && task.Result;
+                }
+            }) { IsBackground = true }.Start();
+        }
+
+        Uri uri;
+        int index = 0;
+        bool Connected;
+        string me, kolega;
+        readonly CookieJar cookies = new CookieJar();
+        string StintoUrl = "https://stin.to/api/chat/";
+        readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+        public void Disconnect() {
+            cancellationTokenSource.Cancel();
+        }
+
+        public Stinto(ConnectEventHandler OnConnect, DisconnectEventHandler OnDisconnect) {
+            this.OnConnect += OnConnect;
+            this.OnDisconnect += OnDisconnect;
+        }
+
+        ~Stinto() {
+            cancellationTokenSource.Cancel();
+        }
+
+        public async Task<Stinto> InitializeAsync(Func<string, Task> RoomCreated) {
+            await CreateRoomAsync(RoomCreated);
+            await LogIn2RoomAsync();
+            ConnectManager();
+            return this;
+        }
+
+        public static Task<Stinto> CreateAsync(Func<string, Task> RoomCreated, ConnectEventHandler OnConnect, DisconnectEventHandler OnDisconnect) {
+            var server = new Stinto(OnConnect, OnDisconnect);
+            return server.InitializeAsync(RoomCreated);
+        }
+
+        public async Task<Stinto> InitializeAsync(string room) {
+            StintoUrl += room + "/";
+            await LogIn2RoomAsync();
+            await ConnectAsync();
+            return this;
+        }
+
+        public static Task<Stinto> CreateAsync(string room, ConnectEventHandler OnConnect, DisconnectEventHandler OnDisconnect) {
+            var server = new Stinto(OnConnect, OnDisconnect);
+            return server.InitializeAsync(room);
+        }
+
+        static async Task<bool> WaitPingAsync(CookieJar cookies, string StintoUrl, string me, int index, CancellationToken cancellationToken) {
+            while (!cancellationToken.IsCancellationRequested) {
+                string result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync());
+                foreach (string line in result.Trim().Split('\n')) {
+                    index++;
+                    string[] words = line.Split('\t');
+                    if (words[3] == "t" && words[4] == "private" + delimeter + yeahimhere + delimeter + me)
+                        return true;
                 }
             }
+            return false;
+        }
+
+        public static async Task<bool> PingAsync(string room) {
+            int index;
+            string me;
+            CookieJar cookies = new CookieJar();
+            string StintoUrl = "https://stin.to/api/chat/" + room + "/";
+            while (true) {
+                me = RandomString(6);
+                IFlurlResponse response;
+                try {
+                    response = await StintoUrl.AppendPathSegment("login").WithTimeout(999).PostUrlEncodedAsync(new { nick = me, termsOfUse = "true" });
+                    if (response.ResponseMessage.IsSuccessStatusCode) {
+                        cookies.AddOrReplace(response.Cookies[1]);
+                        break;
+                    }
+                }
+                catch (FlurlHttpException ex) when (ex.StatusCode == 429) {
+                    await Task.Delay(500);
+                    continue;
+                }
+            }
+            string result = await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", -2).WithCookies(cookies).GetStringAsync();
+            string[] lines = result.Substring(0, result.IndexOf("\n0")).Split('\n');
+            lines = lines.Take(lines.Length - 1).Where(line => line.Split('\t')[6] == me && line.Split('\t')[8] == "false").ToArray();
+            me = lines[0].Split('\t')[4];
+
+            result = DecodeUri((await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", 0).WithCookies(cookies).GetStringAsync()).Trim());
+            index = Convert.ToInt32(result.Split('\n').Last().Split('\t')[0], 16);
+
+            await StintoUrl.AppendPathSegment("post").WithCookies(cookies).PostUrlEncodedAsync(new { type = "TXT", text = "private" + delimeter + areyoufree + delimeter + me });
+
+            var cancellationToken = new CancellationTokenSource();
+            var task = WaitPingAsync(cookies, StintoUrl, me, index, cancellationToken.Token);
+            if (await Task.WhenAny(task, Task.Delay(waitTime, cancellationToken.Token)) == task)
+                return true;
+            cancellationToken.Cancel();
+            return false;
         }
     }
 }

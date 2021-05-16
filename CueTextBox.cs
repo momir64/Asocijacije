@@ -8,17 +8,17 @@ namespace Asocijacije {
         [Localizable(true)]
         public string Cue {
             get => mCue;
-            set { mCue = value; updateCue(); }
+            set { mCue = value; UpdateCue(); }
         }
         private string mCue;
-        private void updateCue() {
+        private void UpdateCue() {
             if (IsHandleCreated && mCue != null) {
                 SendMessage(Handle, 0x1501, (IntPtr)1, mCue);
             }
         }
         protected override void OnHandleCreated(EventArgs e) {
             base.OnHandleCreated(e);
-            updateCue();
+            UpdateCue();
         }
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wp, string lp);

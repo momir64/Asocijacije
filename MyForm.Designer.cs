@@ -114,6 +114,7 @@ namespace Asocijacije {
             this.MaximizeBox = false;
             this.MinimumSize = new System.Drawing.Size(1280, 720);
             this.Name = "MyForm";
+            this.Text = "Asocijacije";
             this.Load += new System.EventHandler(this.MyForm_Load);
             this.Resize += new System.EventHandler(this.MyForm_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.closeBtn)).EndInit();

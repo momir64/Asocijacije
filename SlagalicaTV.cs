@@ -1,29 +1,21 @@
 ﻿using System;
-using System.Net;
+using Flurl.Http;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace Asocijacije {
     class SlagalicaTV {
-        readonly HttpClient clientM;
-        readonly CookieContainer cookiesM;
-        readonly HttpClientHandler handlerM;
+        readonly CookieJar cookies = new CookieJar();
 
-        public SlagalicaTV() {
-            cookiesM = new CookieContainer();
-            handlerM = new HttpClientHandler() { CookieContainer = cookiesM };
-            clientM = new HttpClient(handlerM);
-            var values = new Dictionary<string, string> { { "openid", "ovojeime" }, { "lozinka", "ovojesifra" } };
-            clientM.PostAsync(new Uri("http://www.slagalica.tv/korisnik/prijava_submit/"), new FormUrlEncodedContent(values)).Wait();
+        public async Task<SlagalicaTV> InitializeAsync() {
+            await "http://www.slagalica.tv/korisnik/prijava_submit/".WithCookies(cookies).PostUrlEncodedAsync(new { openid = "ovojeime", lozinka = "ovojesifra" });
+            return this;
         }
 
         public async Task<string> FindData(string date, params string[] data) {
-            Uri uri = new Uri("http://www.slagalica.tv/play/asocijacije/" + date);
-            string response = await clientM.GetAsync(uri).Result.Content.ReadAsStringAsync();
+            string response = await ("http://www.slagalica.tv/play/asocijacije/" + date).WithCookies(cookies).GetStringAsync();
             string cypher = GetStringBetween(response, "ajax_rpc_loader('", "'));");
             string key = "F81A23D45E67B09C";
             string result = "";
@@ -34,10 +26,6 @@ namespace Asocijacije {
                 return result;
             return "";
         }
-
-        private readonly static CookieContainer cookies = new CookieContainer();
-        private readonly static HttpClientHandler handler = new HttpClientHandler() { CookieContainer = cookies };
-        private readonly static HttpClient client = new HttpClient(handler);
 
         public static string[][][] ParseData(string result) {
             string[][][] asocijacije = new string[5][][];
@@ -75,16 +63,10 @@ namespace Asocijacije {
             return start.AddDays(Random(range)).ToString("yyyy-MM-dd");
         }
 
-        private static async Task LogIn() {
-            Uri uri = new Uri("http://www.slagalica.tv/korisnik/prijava_submit/");
-            var values = new Dictionary<string, string> { { "openid", "ovojeime" }, { "lozinka", "ovojesifra" } };
-            await client.PostAsync(uri, new FormUrlEncodedContent(values));
-        }
-
         public static async Task<string> GetData(string date) {
-            await LogIn();
-            Uri uri = new Uri("http://www.slagalica.tv/play/asocijacije/" + date);
-            string response = await client.GetAsync(uri).Result.Content.ReadAsStringAsync();
+            CookieJar cookies = new CookieJar();
+            await "http://www.slagalica.tv/korisnik/prijava_submit/".WithCookies(cookies).PostUrlEncodedAsync(new { openid = "ovojeime", lozinka = "ovojesifra" });
+            string response = await ("http://www.slagalica.tv/play/asocijacije/" + date).WithCookies(cookies).GetStringAsync();
             string cypher = GetStringBetween(response, "ajax_rpc_loader('", "'));");
             string key = "F81A23D45E67B09C";
             string result = "";

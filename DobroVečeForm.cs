@@ -13,12 +13,13 @@ namespace Asocijacije {
     public partial class DobroVečeForm : MyForm {
         public void Center() => CenterToScreen();
         public DobroVečeForm() {
+            //DeleteAllFiles();
             InitializeComponent();
             BackBtnClick = new EventHandler(Back_Click);
         }
 
-        private void Back_Click(object sender, EventArgs e) {
-            DeleteFile(MyName);
+        private async void Back_Click(object sender, EventArgs e) {
+            await DeleteFileAsync(MyName);
             BackBtnVisible = false;
             unetoIme = false;
             OnResize(e);
@@ -33,63 +34,63 @@ namespace Asocijacije {
         Stinto chat;
         File[] list;
         string MyName { get => nameBox.Text; }
-        private void PlayBtn_Click(object sender, EventArgs e) {
+        private async void PlayBtn_Click(object sender, EventArgs e) {
             playBtn.Enabled = false;
             ShowLoader();
-            Task.Run(() => {
-                list = ListFiles();
-                if (list.Any(file => file.Name == MyName)) {
-                    Invoke(new MethodInvoker(delegate () {
-                        playBtn.Enabled = true;
-                        HideLoader();
-                        MessageBox.Show("Име је заузето!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }));
-                }
-                else {
-                    chat = new Stinto();
-                    chat.OnConnect += Connected;
-                    CreateFile(MyName, chat.Room);
-                    Invoke(new MethodInvoker(delegate () {
-                        playBtn.Enabled = true;
-                        HideLoader();
-                        listBox.Items.Clear();
-                        foreach (File file in list)
-                            listBox.Items.Add(file.Name);
-                        BackBtnVisible = true;
-                        unetoIme = true;
-                        OnResize(e);
-                        UpdateList();
-                        CleanList();
-                    }));
-                }
-            });
+            list = await ListFilesAsync();
+            if (list.Any(file => file.Name == MyName)) {
+                playBtn.Enabled = true;
+                HideLoader();
+                MessageBox.Show("Име је заузето!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else {
+                if (chat != null) chat.Disconnect();
+                chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
+                await chat.InitializeAsync(RoomCreatedAsync);
+            }
         }
 
-        private void Connected() {
+        async Task RoomCreatedAsync(string room) {
+            await CreateFileAsync(MyName, room);
+            playBtn.Enabled = true;
+            HideLoader();
+            listBox.Items.Clear();
+            foreach (File file in list)
+                listBox.Items.Add(file.Name);
+            BackBtnVisible = true;
+            unetoIme = true;
+            OnResize(new EventArgs());
+            CleanList();
+            UpdateList();
+        }
+
+        private async Task ConnectedServerAsync(bool successful) {
             Invoke(new MethodInvoker(delegate () {
                 ShowLoader();
             }));
-            new Thread(async () => {
-                DeleteFile(MyName);
-                string kolega = chat.ReadMessage();
-                int takmicar1 = Convert.ToInt32(chat.ReadMessage());
-                int takmicar2 = Convert.ToInt32(chat.ReadMessage());
-                string datum = ParNepar(true);
-                string[][][] asocijacije = ParseData(await GetData(datum));
-                Invoke(new MethodInvoker(delegate () {
-                    new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
-                    Task.Delay(20).Wait();
-                    Hide();
-                    HideLoader();
-                }));
-            }).Start();
+            string kolega = await chat.ReadMessageAsync();
+            await DeleteFileAsync(kolega);
+            int takmicar1 = Convert.ToInt32(await chat.ReadMessageAsync());
+            int takmicar2 = Convert.ToInt32(await chat.ReadMessageAsync());
+            string datum = await ParNeparAsync(true);
+            string[][][] asocijacije = ParseData(await GetData(datum));
+            Invoke(new MethodInvoker(delegate () {
+                new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
+                Task.Delay(20).Wait();
+                Hide();
+                HideLoader();
+            }));
         }
 
+        private async Task DisonnectedAsync() {
+            // TODO
+        }
+
+        readonly float LoaderSize = 0.2f;
         void ShowLoader() {
-            float size = 0.2f;
             loader.Visible = true;
-            loader.Location = Point.Round(new PointF(Width / 2 - Height * size / 2, Height / 2 - Height * size / 2));
-            loader.Size = Size.Round(new SizeF(Height * size, Height * size));
+            loader.Location = Point.Round(new PointF(Width / 2 - Height * LoaderSize / 2, Height / 2 - Height * LoaderSize / 2));
+            loader.Size = Size.Round(new SizeF(Height * LoaderSize, Height * LoaderSize));
         }
 
         void HideLoader() {
@@ -131,6 +132,10 @@ namespace Asocijacije {
                 playBtn.Left = nameBox.Left;
                 playBtn.Width = nameBox.Width;
                 playBtn.Height = nameBox.Height + 5;
+            }
+            if (loader.Visible) {
+                loader.Location = Point.Round(new PointF(Size.Width / 2 - Size.Height * LoaderSize / 2, Size.Height / 2 - Size.Height * LoaderSize / 2));
+                loader.Size = Size.Round(new SizeF(Size.Height * LoaderSize, Size.Height * LoaderSize));
             }
         }
 
@@ -176,37 +181,38 @@ namespace Asocijacije {
             return c;
         }
 
-        private void ListBox_MouseDoubleClick(object sender, MouseEventArgs e) {
+        string kolega;
+        private async void ListBox_MouseDoubleClick(object sender, MouseEventArgs e) {
             int index = listBox.IndexFromPoint(e.Location);
             if (index != ListBox.NoMatches) {
-                string kolega = listBox.Items[index].ToString();
+                kolega = listBox.Items[index].ToString();
                 ShowLoader();
-                new Thread(async () => {
-                    chat = new Stinto(ReadFile(kolega).Content);
-                    if (chat.Connected) {
-                        DeleteFile(MyName);
-                        int takmicar1 = Random(1, 7);
-                        int takmicar2 = Random(1, 7);
-                        chat.SendMessage(MyName);
-                        chat.SendMessage(takmicar1.ToString());
-                        chat.SendMessage(takmicar2.ToString());
-                        string datum = ParNepar(false);
-                        string[][][] asocijacije = ParseData(await GetData(datum));
-                        Invoke(new MethodInvoker(delegate () {
-                            new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
-                            Task.Delay(20).Wait();
-                            Hide();
-                            HideLoader();
-                        }));
-                    }
-                    else {
-                        DeleteFile(kolega);
-                        Invoke(new MethodInvoker(delegate () {
-                            HideLoader();
-                            MessageBox.Show("Играч није више доступан!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }));
-                    }
-                }).Start();
+                if (chat != null) chat.Disconnect();
+                chat = new Stinto(ConnectedClientAsync, DisonnectedAsync);
+                await chat.InitializeAsync((await ReadFileAsync(kolega)).Content);
+            }
+        }
+
+        private async Task ConnectedClientAsync(bool successful) {
+            if (successful) {
+                await DeleteFileAsync(kolega);
+                int takmicar1 = Random(1, 7);
+                int takmicar2 = Random(1, 7);
+                await chat.SendMessageAsync(MyName);
+                await chat.SendMessageAsync(takmicar1.ToString());
+                await chat.SendMessageAsync(takmicar2.ToString());
+                string datum = await ParNeparAsync(false);
+                string[][][] asocijacije = ParseData(await GetData(datum));
+                new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
+                Task.Delay(20).Wait();
+                Hide();
+                HideLoader();
+            }
+            else {
+                await DeleteFileAsync(kolega);
+                SignalUpdate.Set();
+                HideLoader();
+                MessageBox.Show("Играч није више доступан!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -223,26 +229,28 @@ namespace Asocijacije {
         }
 
         bool prvi;
-        private string ParNepar(bool whoami) {
+        private async Task<string> ParNeparAsync(bool whoami) {
             string datum;
             string mojIzbor = Random(2).ToString();
-            chat.SendMessage(mojIzbor);
-            string tvojIzbor = chat.ReadMessage();
+            await chat.SendMessageAsync(mojIzbor);
+            string tvojIzbor = await chat.ReadMessageAsync();
             prvi = (mojIzbor == tvojIzbor) == whoami;
             if (prvi) {
                 datum = GetRandomDate();
-                chat.SendMessage(datum);
+                await chat.SendMessageAsync(datum);
             }
             else
-                datum = chat.ReadMessage();
+                datum = await chat.ReadMessageAsync();
             return datum;
         }
 
         void UpdateList() {
-            Task.Run(() => {
+            new Thread(async () => {
                 while (true) {
+                    SignalUpdate.WaitOne(5000);
+                    SignalUpdate.Reset();
                     if (Visible) {
-                        list = ListFiles();
+                        list = await ListFilesAsync();
                         Invoke(new MethodInvoker(delegate () {
                             listBox.Items.Clear();
                             foreach (File file in list)
@@ -250,32 +258,32 @@ namespace Asocijacije {
                                     listBox.Items.Add(file.Name);
                         }));
                     }
-                    Task.Delay(10000).Wait();
                 }
-            });
+            }) { IsBackground = true }.Start();
         }
 
+        readonly ManualResetEvent SignalUpdate = new ManualResetEvent(false);
         void CleanList() {
-            Task.Run(() => {
+            new Thread(() => {
                 while (true) {
                     if (Visible) {
                         File[] items = list.Clone() as File[];
                         Task[] tasks = new Task[items.Length];
                         for (int i = 0; i < items.Length; i++)
-                            tasks[i] = new Task((object index) => {
+                            tasks[i] = new Task(async (object index) => {
                                 if (items[(int)index].Name != MyName) {
-                                    File file = ReadFile(items[(int)index]);
-                                    if (!Stinto.Ping(file.Content))
-                                        DeleteFile(file);
+                                    File file = await ReadFileAsync(items[(int)index]);
+                                    if (file != null && !await Stinto.PingAsync(file.Content))
+                                        await DeleteFileAsync(file);
                                 }
                             }, i);
-                        foreach (Task task in tasks)
-                            task.Start();
+                        foreach (Task task in tasks) task.Start();
                         Task.WaitAll(tasks);
                     }
-                    Task.Delay(25000).Wait();
+                    SignalUpdate.Set();
+                    Task.Delay(10000).Wait();
                 }
-            });
+            }) { IsBackground = true }.Start();
         }
     }
 }
