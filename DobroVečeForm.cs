@@ -82,8 +82,9 @@ namespace Asocijacije {
             }));
         }
 
-        private async Task DisonnectedAsync() {
-            // TODO
+        private Task DisonnectedAsync() {
+            MessageBox.Show("Играч је напустио игру!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return Task.CompletedTask;
         }
 
         readonly float LoaderSize = 0.2f;
@@ -236,7 +237,7 @@ namespace Asocijacije {
         void UpdateList() {
             new Thread(async () => {
                 while (true) {
-                    SignalUpdate.WaitOne(5000);
+                    SignalUpdate.WaitOne(2000);
                     SignalUpdate.Reset();
                     if (Visible) {
                         list = await ListFilesAsync();
@@ -270,7 +271,7 @@ namespace Asocijacije {
                         Task.WaitAll(tasks);
                     }
                     SignalUpdate.Set();
-                    Task.Delay(10000).Wait();
+                    Task.Delay(5000).Wait();
                 }
             }) { IsBackground = true }.Start();
         }

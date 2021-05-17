@@ -157,9 +157,10 @@ namespace Asocijacije {
         async void OnResult(TextBoxRounded textBox, bool addScore = true) {
             if (naRedu)
                 await chat.SendMessageAsync("result:" + textBox.K + ":" + textBox.Text);
+            else
+                otvaranje = true;
             await Task.Delay(750);
             probano = true;
-            otvaranje = true;
             foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
                 if (IspraviCir(textBox.Text) == resenje) {
                     int score = 0;
@@ -180,19 +181,18 @@ namespace Asocijacije {
                         score += 7;
                     }
                     if (addScore)
-                        AddScore(scoreL, score);
+                        AddScore(prvi == naRedu ? scoreL : scoreD, score);
                     textBox.Opened = true;
+                    if (!naRedu)
+                        _ = ReceiveMessageAsync();
                     return;
                 }
             }
             RestoreTitles();
-            if (naRedu) {
-                naRedu = false;
-                UpdateNaRedu();
-                await ReceiveMessageAsync();
-            }
-            else
-                naRedu = true;
+            if (naRedu)
+                _ = ReceiveMessageAsync();
+            naRedu = !naRedu;
+            UpdateNaRedu();
         }
 
         TextBoxRounded textBoxOld;
@@ -214,7 +214,7 @@ namespace Asocijacije {
                     textBox.Enabled = true;
                     textBox.ResetText();
                 }
-                else if (!finished && !otvaranje && textBox.B == 5) {
+                else if (!finished && (!otvaranje || probajKonacno) && textBox.B == 5) {
                     RestoreTitles();
                     await chat.SendMessageAsync("next");
                     otvaranje = true;
