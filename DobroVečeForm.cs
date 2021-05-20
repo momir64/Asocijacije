@@ -6,7 +6,6 @@ using System.Threading;
 using static Network.Gist;
 using System.Windows.Forms;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 using static Asocijacije.SlagalicaTV;
 
 namespace Asocijacije {
@@ -75,7 +74,7 @@ namespace Asocijacije {
             string datum = await ParNeparAsync(true);
             string[][][] asocijacije = ParseData(await GetData(datum));
             Invoke(new MethodInvoker(delegate () {
-                new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
+                new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2, MyName, kolega).Show(this);
                 Task.Delay(20).Wait();
                 Hide();
                 HideLoader();
@@ -204,7 +203,7 @@ namespace Asocijacije {
                 await chat.SendMessageAsync(takmicar2.ToString());
                 string datum = await ParNeparAsync(false);
                 string[][][] asocijacije = ParseData(await GetData(datum));
-                new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2).Show(this);
+                new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2, MyName, kolega).Show(this);
                 Task.Delay(20).Wait();
                 Hide();
                 HideLoader();
@@ -271,7 +270,7 @@ namespace Asocijacije {
                         Task.WaitAll(tasks);
                     }
                     SignalUpdate.Set();
-                    Task.Delay(5000).Wait();
+                    Task.Delay(10000).Wait();
                 }
             }) { IsBackground = true }.Start();
         }

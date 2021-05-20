@@ -9,12 +9,16 @@ namespace Asocijacije {
     public partial class AsocijacijeForm : PozadinaForm {
         bool naRedu;
         readonly bool prvi;
+        readonly string me;
         readonly Stinto chat;
+        readonly string kolega;
         readonly string[][][] asocijacije;
-        public AsocijacijeForm(string[][][] asocijacije, Stinto chat, bool prvi, int takmicar1, int takmicar2) : base(takmicar1, takmicar2) {
+        public AsocijacijeForm(string[][][] asocijacije, Stinto chat, bool prvi, int takmicar1, int takmicar2, string me, string kolega) : base(takmicar1, takmicar2) {
             this.asocijacije = asocijacije;
+            this.kolega = kolega;
             this.chat = chat;
             this.prvi = prvi;
+            this.me = me;
             naRedu = prvi;
             InitializeComponent();
         }
@@ -67,7 +71,7 @@ namespace Asocijacije {
         }
 
         void DaljeDown(object sender, MouseEventArgs e) {
-            if (naRedu && !finished && !otvaranje)
+            if (naRedu && !finished && (!otvaranje || probajKonacno || SveOtvoreno()))
                 dalje.Color = TextBoxRounded.NeutralnaDown;
         }
 
@@ -100,7 +104,7 @@ namespace Asocijacije {
         }
 
         float sec = 1;
-        readonly int maxTime = 12000;
+        readonly int maxTime = 120;
         private void Tick(object sender, EventArgs e) {
             if (!finished && sec <= maxTime) {
                 timerBox.SetPercentage(sec / maxTime);
@@ -126,6 +130,7 @@ namespace Asocijacije {
 
         async Task ReceiveMessageAsync() {
             string message = await chat.ReadMessageAsync();
+            probajKonacno = false;
             if (message == "next") {
                 dalje.Color = TextBoxRounded.NeutralnaDown;
                 await Task.Delay(500);
@@ -155,11 +160,12 @@ namespace Asocijacije {
         bool finished = false;
         bool otvaranje = true;
         async void OnResult(TextBoxRounded textBox, bool addScore = true) {
-            if (naRedu)
+            if (naRedu && !finished)
                 await chat.SendMessageAsync("result:" + textBox.K + ":" + textBox.Text);
             else
                 otvaranje = true;
-            await Task.Delay(750);
+            if (!finished)
+                await Task.Delay(750);
             probano = true;
             foreach (string resenje in asocijacije[textBox.K][textBox.K == 4 ? 0 : 4]) {
                 if (IspraviCir(textBox.Text) == resenje) {
@@ -172,18 +178,23 @@ namespace Asocijacije {
                             if (j < 4 && !kolone[i][4 - j].Opened)
                                 score++;
                             if (!kolone[i][0].Opened)
-                                kolone[i][4 - j].Open(asocijacije[i][j][0], prvi == naRedu ? TextBoxRounded.Plava : TextBoxRounded.Crvena);
+                                kolone[i][4 - j].Open(asocijacije[i][j][0], finished ? TextBoxRounded.Neutralna : prvi == naRedu ? TextBoxRounded.Plava : TextBoxRounded.Crvena);
                         }
                     }
                     if (textBox.K == 4) {
-                        kolone[4][0].Open(asocijacije[4][0][0], prvi == naRedu ? TextBoxRounded.Plava : TextBoxRounded.Crvena);
+                        kolone[4][0].Open(asocijacije[4][0][0], finished ? TextBoxRounded.Neutralna : prvi == naRedu ? TextBoxRounded.Plava : TextBoxRounded.Crvena);
+                        timer.Enabled = false;
                         finished = true;
                         score += 7;
                     }
                     if (addScore)
                         AddScore(prvi == naRedu ? scoreL : scoreD, score);
+                    if (textBox.K == 4 && Convert.ToInt32(scoreL.Text) >= Convert.ToInt32(scoreD.Text))
+                        naReduBox.Open((prvi ? me.ToUpper() : kolega.ToUpper()) + " ЈЕ ПОБЕДИО", TextBoxRounded.Plava);
+                    else if (textBox.K == 4)
+                        naReduBox.Open((prvi ? kolega.ToUpper() : me.ToUpper()) + " ЈЕ ПОБЕДИО", TextBoxRounded.Crvena);
                     textBox.Opened = true;
-                    if (!naRedu)
+                    if (!naRedu && !finished)
                         _ = ReceiveMessageAsync();
                     return;
                 }
@@ -207,14 +218,14 @@ namespace Asocijacije {
                     textBox.Text = asocijacije[textBox.K][textBox.B][0];
                     textBox.Opened = true;
                 }
-                else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4) || SveOtvoreno()) && textBox.B == 4 && (probano || DifferentTextBox(textBox)) && !textBox.Opened && (OtvorenaKolona(textBox.K) || textBox.B == 4)) {
+                else if (!finished && (!otvaranje || (probajKonacno && textBox.K == 4) || SveOtvoreno()) && textBox.B == 4 && (probano || DifferentTextBox(textBox)) && !textBox.Opened && (OtvorenaKolona(textBox.K) || textBox.K == 4)) {
                     RestoreTitles();
                     probano = false;
                     backClick = false;
                     textBox.Enabled = true;
                     textBox.ResetText();
                 }
-                else if (!finished && (!otvaranje || probajKonacno) && textBox.B == 5) {
+                else if (!finished && (!otvaranje || probajKonacno || SveOtvoreno()) && textBox.B == 5) {
                     RestoreTitles();
                     await chat.SendMessageAsync("next");
                     otvaranje = true;
@@ -232,10 +243,9 @@ namespace Asocijacije {
 
         bool SveOtvoreno() {
             for (int i = 0; i < 4; i++)
-                for (int j = 1; j < 5; j++) {
+                for (int j = 1; j < 5; j++)
                     if (!kolone[i][j].Opened)
                         return false;
-                }
             return true;
         }
 

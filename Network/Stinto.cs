@@ -4,11 +4,10 @@ using Flurl.Http;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 
 namespace Network {
     public class Stinto {
-        const int waitTime = 3000;
+        const int waitTime = 6000;
         const char delimeter = '\uFFFF';
         const string talktome = "talktome";
         const string areyoufree = "areyoufree";

@@ -2,7 +2,6 @@
 using Flurl.Http;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace Asocijacije {
@@ -52,6 +51,7 @@ namespace Asocijacije {
 
         static readonly Random random = new Random();
         public static string GetRandomDate() {
+            return "2020-01-01";
             DateTime start = new DateTime(2020, 1, 1);
             int range = (DateTime.Today - start).Days - 1;
             return start.AddDays(random.Next(range)).ToString("yyyy-MM-dd");
