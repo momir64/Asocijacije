@@ -104,7 +104,7 @@ namespace Asocijacije {
         }
 
         float sec = 1;
-        readonly int maxTime = 120;
+        readonly int maxTime = 180;
         private void Tick(object sender, EventArgs e) {
             if (!finished && sec <= maxTime) {
                 timerBox.SetPercentage(sec / maxTime);
@@ -148,7 +148,7 @@ namespace Asocijacije {
                 kolone[K][4 - B].Opened = true;
                 await ReceiveMessageAsync();
             }
-            else if (parts[0] == "result") {
+            else if (parts[0] == "result" && !finished) {
                 RestoreTitles();
                 kolone[Convert.ToInt32(parts[1])][0].Text = parts[2];
                 OnResult(kolone[Convert.ToInt32(parts[1])][0]);
@@ -184,6 +184,7 @@ namespace Asocijacije {
                     if (textBox.K == 4) {
                         kolone[4][0].Open(asocijacije[4][0][0], finished ? TextBoxRounded.Neutralna : prvi == naRedu ? TextBoxRounded.Plava : TextBoxRounded.Crvena);
                         timer.Enabled = false;
+                        chat.Disconnect();
                         finished = true;
                         score += 7;
                     }

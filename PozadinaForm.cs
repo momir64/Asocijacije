@@ -97,9 +97,9 @@ namespace Asocijacije {
         Bitmap levi, desni;
         private void RandomTakmicari(int takmicar1, int takmicar2) {
             egg = takmicar1 == 4;
-            if (levi != null) levi.Dispose();
+            levi?.Dispose();
             levi = (Bitmap)Properties.Resources.ResourceManager.GetObject("levi" + takmicar1);
-            if (desni != null) desni.Dispose();
+            desni?.Dispose();
             desni = (Bitmap)Properties.Resources.ResourceManager.GetObject("desni" + takmicar2);
         }
 

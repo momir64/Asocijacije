@@ -43,7 +43,7 @@ namespace Asocijacije {
                 MessageBox.Show("Име је заузето!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else {
-                if (chat != null) chat.Disconnect();
+                chat?.Disconnect();
                 chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
                 await chat.InitializeAsync(RoomCreatedAsync);
             }
@@ -187,7 +187,7 @@ namespace Asocijacije {
             if (index != ListBox.NoMatches) {
                 kolega = listBox.Items[index].ToString();
                 ShowLoader();
-                if (chat != null) chat.Disconnect();
+                chat?.Disconnect();
                 chat = new Stinto(ConnectedClientAsync, DisonnectedAsync);
                 await chat.InitializeAsync((await ReadFileAsync(kolega)).Content);
             }
@@ -236,19 +236,32 @@ namespace Asocijacije {
         void UpdateList() {
             new Thread(async () => {
                 while (true) {
-                    SignalUpdate.WaitOne(2000);
+                    SignalUpdate.WaitOne(1500);
                     SignalUpdate.Reset();
-                    if (Visible) {
+                    if (Visible && listBox.Visible) {
                         list = await ListFilesAsync();
+                        bool prisutan = false;
                         Invoke(new MethodInvoker(delegate () {
                             listBox.Items.Clear();
                             foreach (File file in list)
                                 if (file.Name != MyName)
                                     listBox.Items.Add(file.Name);
+                                else
+                                    prisutan = true;
                         }));
+                        if (!prisutan && !loader.Visible) {
+                            chat?.Disconnect();
+                            chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
+                            await chat.InitializeAsync(RoomCreatedUpdateAsync);
+                        }
                     }
                 }
             }) { IsBackground = true }.Start();
+        }
+
+        async Task RoomCreatedUpdateAsync(string room) {
+            await CreateFileAsync(MyName, room);
+            SignalUpdate.Set();
         }
 
         readonly ManualResetEvent SignalUpdate = new ManualResetEvent(false);

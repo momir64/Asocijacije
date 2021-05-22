@@ -102,7 +102,13 @@ namespace Network {
 
         public async Task<string> ReadMessageAsync() {
             while (true) {
-                string result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync());
+                string result;
+                try {
+                    result = DecodeUri(await StintoUrl.AppendPathSegment("poll").SetQueryParam("seq", index).WithCookies(cookies).GetStringAsync(cancellationTokenSource.Token));
+                }
+                catch (FlurlHttpException ex) when (ex.InnerException is TaskCanceledException) {
+                    return "";
+                }
                 if (result.Length == 0) continue;
                 foreach (string line in result.Trim().Split('\n')) {
                     index++;
