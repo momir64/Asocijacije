@@ -18,12 +18,12 @@ namespace Asocijacije {
         }
 
         private async void Back_Click(object sender, EventArgs e) {
-            //Console.WriteLine("Delete file " + MyName);
-            await DeleteFileAsync(MyName);
             BackBtnVisible = false;
             unetoIme = false;
             OnResize(e);
             nameBox.Focus();
+            //Console.WriteLine("Delete file " + MyName);
+            await DeleteFileAsync(MyName);
         }
 
         private void DobroVečeForm_Load(object sender, EventArgs e) {
@@ -37,12 +37,22 @@ namespace Asocijacije {
         private async void PlayBtn_Click(object sender, EventArgs e) {
             playBtn.Enabled = false;
             ShowLoader();
-            //Console.WriteLine("Liste files");
+            //Console.WriteLine("List files");
             list = await ListFilesAsync();
             if (list.Any(file => file.Name == MyName)) {
-                playBtn.Enabled = true;
-                HideLoader();
-                MessageBox.Show("Име је заузето!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                File file = await ReadFileAsync(list.First(it => it.Name == MyName));
+                //Console.WriteLine("Pingujem zauzeto ime " + file.Name);
+                if (file != null && !await Stinto.PingAsync(file.Content)) {
+                    chat?.Disconnect();
+                    chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
+                    //Console.WriteLine("Initialize chat");
+                    await chat.InitializeAsync(RoomCreatedAsync);
+                }
+                else {
+                    playBtn.Enabled = true;
+                    HideLoader();
+                    MessageBox.Show("Име је заузето!", "Асоцијације", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             else {
                 chat?.Disconnect();
@@ -53,13 +63,18 @@ namespace Asocijacije {
         }
 
         async Task RoomCreatedAsync(string room) {
+            //Console.WriteLine("Brišem sve fajlove sa imenom " + MyName);
+            foreach (File file in list)
+                if (file.Name == MyName)
+                    await DeleteFileAsync(file);
             //Console.WriteLine("Napravljen fajl " + MyName + " sa sadržajem " + room);
             await CreateFileAsync(MyName, room);
             playBtn.Enabled = true;
             HideLoader();
             listBox.Items.Clear();
             foreach (File file in list)
-                listBox.Items.Add(file.Name);
+                if (file.Name != MyName && !list.Any(it => it.Name == file.Name))
+                    listBox.Items.Add(file.Name);
             BackBtnVisible = true;
             unetoIme = true;
             OnResize(new EventArgs());
@@ -270,7 +285,7 @@ namespace Asocijacije {
                         Invoke(new MethodInvoker(delegate () {
                             listBox.Items.Clear();
                             foreach (File file in list)
-                                if (file.Name != MyName)
+                                if (file.Name != MyName && !list.Any(it => it.Name == file.Name))
                                     listBox.Items.Add(file.Name);
                                 else
                                     prisutan = true;
@@ -288,7 +303,8 @@ namespace Asocijacije {
 
         async Task RoomCreatedUpdateAsync(string room) {
             //Console.WriteLine("Create file " + MyName + " sa sadržajem " + room);
-            await CreateFileAsync(MyName, room);
+            if (listBox.Visible)
+                await CreateFileAsync(MyName, room);
             SignalUpdate.Set();
         }
 
