@@ -73,7 +73,7 @@ namespace Asocijacije {
             HideLoader();
             listBox.Items.Clear();
             foreach (File file in list)
-                if (file.Name != MyName && !list.Any(it => it.Name == file.Name))
+                if (file.Name != MyName && !listBox.Items.Contains(file.Name))
                     listBox.Items.Add(file.Name);
             BackBtnVisible = true;
             unetoIme = true;
@@ -285,9 +285,9 @@ namespace Asocijacije {
                         Invoke(new MethodInvoker(delegate () {
                             listBox.Items.Clear();
                             foreach (File file in list)
-                                if (file.Name != MyName && !list.Any(it => it.Name == file.Name))
+                                if (file.Name != MyName && !listBox.Items.Contains(file.Name))
                                     listBox.Items.Add(file.Name);
-                                else
+                                else if (file.Name == MyName)
                                     prisutan = true;
                         }));
                         if (!prisutan && !loader.Visible) {
