@@ -11,7 +11,7 @@ namespace Asocijacije {
         readonly public static Color Plava = Color.FromArgb(32, 160, 254);
         readonly public static Color Crvena = Color.FromArgb(253, 44, 34);
         readonly public static Color Neutralna = Color.FromArgb(0, 32, 105);
-        readonly public static Color NeutralnaDown = Color.FromArgb(0, 70, 150);
+        readonly public static Color NeutralnaDown = Color.FromArgb(129, 30, 151);
 
         public int K;
         public int B;
