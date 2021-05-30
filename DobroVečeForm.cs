@@ -3,6 +3,7 @@ using Network;
 using System.Linq;
 using System.Drawing;
 using System.Threading;
+using System.Diagnostics;
 using static Network.Gist;
 using System.Windows.Forms;
 using System.Threading.Tasks;
@@ -22,7 +23,7 @@ namespace Asocijacije {
             unetoIme = false;
             OnResize(e);
             nameBox.Focus();
-            //Console.WriteLine("Delete file " + MyName);
+            Trace.WriteLine("Delete file " + MyName);
             await DeleteFileAsync(MyName);
         }
 
@@ -37,15 +38,15 @@ namespace Asocijacije {
         private async void PlayBtn_Click(object sender, EventArgs e) {
             playBtn.Enabled = false;
             ShowLoader();
-            //Console.WriteLine("List files");
+            Trace.WriteLine("List files");
             list = await ListFilesAsync();
             if (list.Any(file => file.Name == MyName)) {
                 File file = await ReadFileAsync(list.First(it => it.Name == MyName));
-                //Console.WriteLine("Pingujem zauzeto ime " + file?.Name ?? "[null]");
+                Trace.WriteLine("Pingujem zauzeto ime " + file?.Name ?? "[null]");
                 if (file != null && !await Stinto.PingAsync(file.Content)) {
                     chat?.Disconnect();
                     chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
-                    //Console.WriteLine("Initialize chat");
+                    Trace.WriteLine("Initialize chat");
                     await chat.InitializeAsync(RoomCreatedAsync);
                 }
                 else {
@@ -57,17 +58,17 @@ namespace Asocijacije {
             else {
                 chat?.Disconnect();
                 chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
-                //Console.WriteLine("Initialize chat");
+                Trace.WriteLine("Initialize chat");
                 await chat.InitializeAsync(RoomCreatedAsync);
             }
         }
 
         async Task RoomCreatedAsync(string room) {
-            //Console.WriteLine("Brišem sve fajlove sa imenom " + MyName);
+            Trace.WriteLine("Brišem sve fajlove sa imenom " + MyName);
             foreach (File file in list)
                 if (file.Name == MyName)
                     await DeleteFileAsync(file);
-            //Console.WriteLine("Napravljen fajl " + MyName + " sa sadržajem " + room);
+            Trace.WriteLine("Napravljen fajl " + MyName + " sa sadržajem " + room);
             await CreateFileAsync(MyName, room);
             playBtn.Enabled = true;
             HideLoader();
@@ -86,19 +87,19 @@ namespace Asocijacije {
             Invoke(new MethodInvoker(delegate () {
                 ShowLoader();
             }));
-            //Console.WriteLine("Čekam kolegu");
+            Trace.WriteLine("Čekam kolegu");
             string kolega = await chat.ReadMessageAsync();
-            //Console.WriteLine("Kolega je " + kolega);
+            Trace.WriteLine("Kolega je " + kolega);
             await DeleteFileAsync(kolega);
-            //Console.WriteLine("Brišem kolegu " + kolega);
+            Trace.WriteLine("Brišem kolegu " + kolega);
             int takmicar1 = Convert.ToInt32(await chat.ReadMessageAsync());
-            //Console.WriteLine("Takmičar 1 je " + takmicar1);
+            Trace.WriteLine("Takmičar 1 je " + takmicar1);
             int takmicar2 = Convert.ToInt32(await chat.ReadMessageAsync());
-            //Console.WriteLine("Takmičar 2 je " + takmicar2);
+            Trace.WriteLine("Takmičar 2 je " + takmicar2);
             string datum = await ParNeparAsync(true);
-            //Console.WriteLine("Datum je " + datum);
+            Trace.WriteLine("Datum je " + datum);
             string[][][] asocijacije = ParseData(await GetData(datum));
-            //Console.WriteLine("Skinuo sam slagalicu");
+            Trace.WriteLine("Skinuo sam slagalicu");
             Invoke(new MethodInvoker(delegate () {
                 new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2, MyName, kolega).Show(this);
                 Task.Delay(20).Wait();
@@ -215,35 +216,35 @@ namespace Asocijacije {
                 ShowLoader();
                 chat?.Disconnect();
                 chat = new Stinto(ConnectedClientAsync, DisonnectedAsync);
-                //Console.WriteLine("Initialize sa kolegom " + kolega);
+                Trace.WriteLine("Initialize sa kolegom " + kolega);
                 await chat.InitializeAsync((await ReadFileAsync(kolega)).Content);
             }
         }
 
         private async Task ConnectedClientAsync(bool successful) {
             if (successful) {
-                //Console.WriteLine("Delete file " + kolega);
+                Trace.WriteLine("Delete file " + kolega);
                 await DeleteFileAsync(kolega);
                 int takmicar1 = random.Next(1, 7);
                 int takmicar2 = random.Next(1, 7);
-                //Console.WriteLine("Šaljem moje ime " + MyName);
+                Trace.WriteLine("Šaljem moje ime " + MyName);
                 await chat.SendMessageAsync(MyName);
-                //Console.WriteLine("Šaljem takmičara 1 " + takmicar1);
+                Trace.WriteLine("Šaljem takmičara 1 " + takmicar1);
                 await chat.SendMessageAsync(takmicar1.ToString());
-                //Console.WriteLine("Šaljem takmičara 2 " + takmicar2);
+                Trace.WriteLine("Šaljem takmičara 2 " + takmicar2);
                 await chat.SendMessageAsync(takmicar2.ToString());
-                //Console.WriteLine("Igram par nepar");
+                Trace.WriteLine("Igram par nepar");
                 string datum = await ParNeparAsync(false);
-                //Console.WriteLine("Datum je " + datum);
+                Trace.WriteLine("Datum je " + datum);
                 string[][][] asocijacije = ParseData(await GetData(datum));
-                //Console.WriteLine("Skinuo sam slagalicu");
+                Trace.WriteLine("Skinuo sam slagalicu");
                 new AsocijacijeForm(asocijacije, chat, prvi, takmicar1, takmicar2, MyName, kolega).Show(this);
                 Task.Delay(20).Wait();
                 Hide();
                 HideLoader();
             }
             else {
-                //Console.WriteLine("Delete file " + kolega);
+                Trace.WriteLine("Delete file " + kolega);
                 await DeleteFileAsync(kolega);
                 SignalUpdate.Set();
                 HideLoader();
@@ -256,18 +257,18 @@ namespace Asocijacije {
         private async Task<string> ParNeparAsync(bool whoami) {
             string datum;
             string mojIzbor = random.Next(2).ToString();
-            //Console.WriteLine("Moj izbor je " + mojIzbor);
+            Trace.WriteLine("Moj izbor je " + mojIzbor);
             await chat.SendMessageAsync(mojIzbor);
             string tvojIzbor = await chat.ReadMessageAsync();
-            //Console.WriteLine("Tvoj izbor je " + tvojIzbor);
+            Trace.WriteLine("Tvoj izbor je " + tvojIzbor);
             prvi = (mojIzbor == tvojIzbor) == whoami;
             if (prvi) {
                 datum = GetRandomDate();
-                //Console.WriteLine("Šaljem datum " + datum);
+                Trace.WriteLine("Šaljem datum " + datum);
                 await chat.SendMessageAsync(datum);
             }
             else {
-                //Console.WriteLine("Čekam datum");
+                Trace.WriteLine("Čekam datum");
                 datum = await chat.ReadMessageAsync();
             }
             return datum;
@@ -279,7 +280,7 @@ namespace Asocijacije {
                     SignalUpdate.WaitOne(1500);
                     SignalUpdate.Reset();
                     if (Visible && listBox.Visible) {
-                        //Console.WriteLine("Ažuriram igrače");
+                        Trace.WriteLine("Ažuriram igrače");
                         list = await ListFilesAsync();
                         bool prisutan = false;
                         Invoke(new MethodInvoker(delegate () {
@@ -293,7 +294,7 @@ namespace Asocijacije {
                         if (!prisutan && !loader.Visible) {
                             chat?.Disconnect();
                             chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
-                            //Console.WriteLine("Initialize chat");
+                            Trace.WriteLine("Initialize chat");
                             await chat.InitializeAsync(RoomCreatedUpdateAsync);
                         }
                     }
@@ -302,7 +303,7 @@ namespace Asocijacije {
         }
 
         async Task RoomCreatedUpdateAsync(string room) {
-            //Console.WriteLine("Create file " + MyName + " sa sadržajem " + room);
+            Trace.WriteLine("Create file " + MyName + " sa sadržajem " + room);
             if (listBox.Visible)
                 await CreateFileAsync(MyName, room);
             SignalUpdate.Set();
@@ -310,11 +311,11 @@ namespace Asocijacije {
 
         async Task PingAndDeleteAsync(File item) {
             if (item.Name != MyName && item.Name != kolega) {
-                //Console.WriteLine("Read file " + item?.Name ?? "[null]");
+                Trace.WriteLine("Read file " + item?.Name ?? "[null]");
                 File file = await ReadFileAsync(item);
-                //Console.WriteLine("Pingujem " + item?.Name ?? "[null]");
+                Trace.WriteLine("Pingujem " + item?.Name ?? "[null]");
                 if (file != null && !await Stinto.PingAsync(file.Content)) {
-                    //Console.WriteLine("Delete file " + file?.Name ?? "[null]");
+                    Trace.WriteLine("Delete file " + file?.Name ?? "[null]");
                     await DeleteFileAsync(file);
                 }
             }
