@@ -41,7 +41,7 @@ namespace Asocijacije {
             list = await ListFilesAsync();
             if (list.Any(file => file.Name == MyName)) {
                 File file = await ReadFileAsync(list.First(it => it.Name == MyName));
-                //Console.WriteLine("Pingujem zauzeto ime " + file.Name);
+                //Console.WriteLine("Pingujem zauzeto ime " + file?.Name ?? "[null]");
                 if (file != null && !await Stinto.PingAsync(file.Content)) {
                     chat?.Disconnect();
                     chat = new Stinto(ConnectedServerAsync, DisonnectedAsync);
@@ -310,11 +310,11 @@ namespace Asocijacije {
 
         async Task PingAndDeleteAsync(File item) {
             if (item.Name != MyName && item.Name != kolega) {
-                //Console.WriteLine("Read file " + item.Name);
+                //Console.WriteLine("Read file " + item?.Name ?? "[null]");
                 File file = await ReadFileAsync(item);
-                //Console.WriteLine("Pingujem " + item.Name);
+                //Console.WriteLine("Pingujem " + item?.Name ?? "[null]");
                 if (file != null && !await Stinto.PingAsync(file.Content)) {
-                    //Console.WriteLine("Delete file " + file.Name);
+                    //Console.WriteLine("Delete file " + file?.Name ?? "[null]");
                     await DeleteFileAsync(file);
                 }
             }
